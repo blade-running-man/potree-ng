@@ -22,6 +22,7 @@
     "build:workers": "node scripts/build-esm-workers.mjs",
     "build:concat-workers": "node scripts/build-workers.mjs",
     "build:pages": "node scripts/generate-pages.mjs",
+    "typecheck": "tsc --noEmit",
     "build:vite": "npm run build:lib && npm run build:workers && npm run build:concat-workers && npm run build:pages",
     "start": "npm run dev",
     "build": "npm run build:vite",
@@ -36,5 +37,10 @@
     "node": ">=18"
   },
   "author": "Markus Schütz",
-  "license": "BSD-2-CLAUSE"
+  "license": "BSD-2-CLAUSE",
+  "devDependencies": {
+    "@types/jquery": "^4.0.1",
+    "@types/three": "^0.125.3",
+    "typescript": "^5.9.3"
+  }
 }
