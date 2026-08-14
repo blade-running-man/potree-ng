@@ -764,7 +764,11 @@ export class Renderer {
 				for (let i = 0; i < shadowMaps.length; i++) {
 					let shadowMap = shadowMaps[i];
 					let bindingPoint = bindingPoints[i];
+					// three lazily creates __webglTexture on first GPU upload; it is
+					// undefined until the shadow map target has been rendered. Skip
+					// binding an unready texture instead of binding garbage.
 					let glTexture = this.threeRenderer.properties.get(shadowMap.target.texture).__webglTexture;
+					if (glTexture === undefined) { continue; }
 
 					gl.activeTexture(gl[`TEXTURE${bindingPoint}`]);
 					gl.bindTexture(gl.TEXTURE_2D, glTexture);
@@ -1329,6 +1333,9 @@ export class Renderer {
 
 						let snapTexture = this.threeRenderer.properties.get(texture).__webglTexture;
 						let snapTextureDepth = this.threeRenderer.properties.get(textureDepth).__webglTexture;
+
+						// Not yet uploaded to the GPU by three — skip until it is.
+						if (snapTexture === undefined || snapTextureDepth === undefined) { break; }
 
 						let bindingPoint = lSnapshotBindingPoints[i];
 						let depthBindingPoint = lSnapshotDepthBindingPoints[i];
