@@ -1406,16 +1406,6 @@ export class Viewer extends EventDispatcher{
 		let width = this.renderArea.clientWidth;
 		let height = this.renderArea.clientHeight;
 
-		let contextAttributes = {
-			alpha: true,
-			depth: true,
-			stencil: false,
-			antialias: false,
-			//premultipliedAlpha: _premultipliedAlpha,
-			preserveDrawingBuffer: true,
-			powerPreference: "high-performance",
-		};
-
 		// let contextAttributes = {
 		// 	alpha: false,
 		// 	preserveDrawingBuffer: true,
@@ -1425,16 +1415,16 @@ export class Viewer extends EventDispatcher{
 		// 	alpha: false,
 		// 	preserveDrawingBuffer: true,
 		// };
-
-		let canvas = document.createElement("canvas");
-
-		let context = canvas.getContext('webgl', contextAttributes );
 
 		this.renderer = new THREE.WebGLRenderer({
-			alpha: true, 
+			alpha: true,
 			premultipliedAlpha: false,
-			canvas: canvas,
-			context: context});
+			antialias: false,
+			stencil: false,
+			depth: true,
+			preserveDrawingBuffer: true,
+			powerPreference: "high-performance",
+		});
 		this.renderer.sortObjects = false;
 		this.renderer.setSize(width, height);
 		this.renderer.autoClear = false;
@@ -1447,23 +1437,8 @@ export class Viewer extends EventDispatcher{
 		//this.renderer.domElement.focus();
 
 		// NOTE: If extension errors occur, pass the string into this.renderer.extensions.get(x) before enabling
-		// enable frag_depth extension for the interpolation shader, if available
 		let gl = this.renderer.getContext();
-		gl.getExtension('EXT_frag_depth');
-		gl.getExtension('WEBGL_depth_texture');
-		gl.getExtension('WEBGL_color_buffer_float'); 	// Enable explicitly for more portability, EXT_color_buffer_float is the proper name in WebGL 2
-		
-		if(gl.createVertexArray == null){
-			let extVAO = gl.getExtension('OES_vertex_array_object');
-
-			if(!extVAO){
-				throw new Error("OES_vertex_array_object extension not supported");
-			}
-
-			gl.createVertexArray = extVAO.createVertexArrayOES.bind(extVAO);
-			gl.bindVertexArray = extVAO.bindVertexArrayOES.bind(extVAO);
-		}
-		
+		gl.getExtension('EXT_color_buffer_float'); 	// needed so FloatType render targets are renderable in WebGL2
 	}
 
 	updateAnnotations () {
