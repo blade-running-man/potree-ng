@@ -1,11 +1,15 @@
-
 import * as THREE from "three";
 
-import {Utils} from "../utils";
+import { Utils } from "../../utils";
+import { azimuthToCssTransform } from "./compassMath";
 
-export class Compass{
+export class Compass {
 
-	constructor(viewer){
+	viewer: any;
+	visible: boolean;
+	dom: JQuery;
+
+	constructor (viewer: any) {
 		this.viewer = viewer;
 
 		this.visible = false;
@@ -23,11 +27,11 @@ export class Compass{
 
 			const projection = viewer.getProjection();
 			const azimuth = Utils.computeAzimuth(p1, p2, projection);
-			
-			this.dom.css("transform", `rotateZ(${-azimuth}rad)`);
+
+			this.dom.css("transform", azimuthToCssTransform(azimuth));
 		});
 
-		this.dom.click( () => {
+		this.dom.click(() => {
 			viewer.setTopView();
 		});
 
@@ -37,22 +41,22 @@ export class Compass{
 		this.setVisible(this.visible);
 	}
 
-	setVisible(visible){
+	setVisible (visible: boolean) {
 		this.visible = visible;
 
 		const value = visible ? "" : "none";
 		this.dom.css("display", value);
 	}
 
-	isVisible(){
+	isVisible () {
 		return this.visible;
 	}
 
-	createElement(){
+	createElement (): JQuery {
 		const style = `style="position: absolute; top: 10px; right: 10px; z-index: 10000; width: 64px;"`;
 		const img = $(`<img src="${Potree.resourcePath}/images/compas.svg" ${style} />`);
 
 		return img;
 	}
 
-};
+}
