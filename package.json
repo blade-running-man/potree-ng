@@ -28,12 +28,13 @@
     "postinstall": "npm run build"
   },
   "dependencies": {
-    "json5": "^2.1.3"
-  },
-  "author": "Markus Schütz",
-  "license": "BSD-2-CLAUSE",
-  "devDependencies": {
+    "json5": "^2.1.3",
     "vite": "^5.4.21",
     "vite-plugin-static-copy": "^1.0.6"
-  }
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "author": "Markus Schütz",
+  "license": "BSD-2-CLAUSE"
 }
