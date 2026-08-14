@@ -17,17 +17,23 @@
   ],
   "main": "./build/potree/potree.js",
   "scripts": {
-    "start": "gulp watch",
-    "build": "gulp build pack",
+    "dev": "vite build --watch",
+    "build:lib": "vite build",
+    "build:workers": "node scripts/build-esm-workers.mjs",
+    "build:concat-workers": "node scripts/build-workers.mjs",
+    "build:pages": "node scripts/generate-pages.mjs",
+    "build:vite": "npm run build:lib && npm run build:workers && npm run build:concat-workers && npm run build:pages",
+    "start": "npm run dev",
+    "build": "npm run build:vite",
     "postinstall": "npm run build"
   },
   "dependencies": {
-    "gulp": "^4.0.2",
-    "gulp-concat": "^2.6.1",
-    "gulp-connect": "^5.7.0",
     "json5": "^2.1.3",
-    "rollup": "^1.31.1",
-    "through": "~2.3.4"
+    "vite": "^5.4.21",
+    "vite-plugin-static-copy": "^1.0.6"
+  },
+  "engines": {
+    "node": ">=18"
   },
   "author": "Markus Schütz",
   "license": "BSD-2-CLAUSE"

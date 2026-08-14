@@ -18,20 +18,37 @@
 Install [node.js](http://nodejs.org/)
 
 Install dependencies, as specified in package.json, and create a build in ./build/potree.
+The build is produced with [Vite](https://vitejs.dev/) (`npm install` runs it automatically via the `postinstall` hook).
 
 ```bash
 npm install
 ```
 
+You can also run the build explicitly at any time:
+
+```bash
+npm run build
+```
+
 ### Run on your PC
 
-Use the `npm start` command to 
+Use the `npm start` command to watch the source and automatically rebuild the main
+bundle `build/potree/potree.js` (and re-copy the static assets) on every change
+(this runs `vite build --watch`). Shaders are part of the bundle, so shader edits
+are picked up too. If you change a **worker** (`src/workers/**`,
+`src/modules/loader/2.0/**`) or an **examples page** source, re-run the full build
+with `npm run build`.
 
-* create ./build/potree 
-* watch for changes to the source code and automatically create a new build on change
-* start a web server at localhost:1234. 
+`npm start` no longer starts a web server on its own (the old gulp-connect server
+was removed together with gulp). In a second terminal, serve the project directory
+with any static web server, for example:
 
-Go to http://localhost:1234/examples/ to test the examples.
+```bash
+python3 -m http.server 1234
+# or:  npx serve -l 1234
+```
+
+Then go to http://localhost:1234/examples/ to test the examples.
 
 ### Deploy to a server
 
