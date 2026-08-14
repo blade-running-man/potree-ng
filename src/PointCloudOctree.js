@@ -769,7 +769,8 @@ export class PointCloudOctree extends PointCloudTree {
 				1, 1,
 				{ minFilter: THREE.LinearFilter,
 					magFilter: THREE.NearestFilter,
-					format: THREE.RGBAFormat }
+					format: THREE.RGBAFormat,
+					colorSpace: THREE.NoColorSpace }
 			);
 
 			this.pickState = {

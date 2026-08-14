@@ -330,7 +330,8 @@ export class PointCloudArena4D extends PointCloudTree{
 				1, 1,
 				{ minFilter: THREE.LinearFilter,
 					magFilter: THREE.NearestFilter,
-					format: THREE.RGBAFormat }
+					format: THREE.RGBAFormat,
+					colorSpace: THREE.NoColorSpace }
 			);
 
 			this.pickState = {

@@ -1425,6 +1425,12 @@ export class Viewer extends EventDispatcher{
 			preserveDrawingBuffer: true,
 			powerPreference: "high-performance",
 		});
+		// Preserve the pre-r152 (r124) look: three enables color management by
+		// default since r152, which would shift gradient/UI colors and re-encode
+		// output to sRGB. Potree authors its own colors/GLSL, so opt out globally
+		// and keep linear output. Full color-management adoption is a follow-up.
+		THREE.ColorManagement.enabled = false;
+		this.renderer.outputColorSpace = THREE.LinearSRGBColorSpace;
 		this.renderer.sortObjects = false;
 		this.renderer.setSize(width, height);
 		this.renderer.autoClear = false;
