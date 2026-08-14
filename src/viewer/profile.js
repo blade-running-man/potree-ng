@@ -975,12 +975,12 @@ export class ProfileWindowController {
 		}
 
 		$("#potree_profile_rotate_cw").click( () => {
-			const radians = THREE.Math.degToRad(this.rotateAmount);
+			const radians = THREE.MathUtils.degToRad(this.rotateAmount);
 			rotate(-radians);
 		});
 
 		$("#potree_profile_rotate_ccw").click( () => {
-			const radians = THREE.Math.degToRad(this.rotateAmount);
+			const radians = THREE.MathUtils.degToRad(this.rotateAmount);
 			rotate(radians);
 		});
 

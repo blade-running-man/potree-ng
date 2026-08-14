@@ -100,7 +100,7 @@ function updateAzimuth(viewer, measure){
 
 	// label
 	const radians = Utils.computeAzimuth(p0.position, p1.position, viewer.getProjection());
-	let degrees = THREE.Math.radToDeg(radians);
+	let degrees = THREE.MathUtils.radToDeg(radians);
 	if(degrees < 0){
 		degrees = 360 + degrees;
 	}

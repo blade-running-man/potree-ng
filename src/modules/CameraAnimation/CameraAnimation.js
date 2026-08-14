@@ -31,7 +31,7 @@ export class CameraAnimation extends EventDispatcher{
 
 		this.controlPoints = [];
 
-		this.uuid = THREE.Math.generateUUID();
+		this.uuid = THREE.MathUtils.generateUUID();
 
 		this.node = new THREE.Object3D();
 		this.node.name = "camera animation";

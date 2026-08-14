@@ -13,7 +13,7 @@ export class Annotation extends EventDispatcher {
 		this._title = args.title || 'No Title';
 		this._description = args.description || '';
 		this.offset = new THREE.Vector3();
-		this.uuid = THREE.Math.generateUUID();
+		this.uuid = THREE.MathUtils.generateUUID();
 
 		if (!args.position) {
 			this.position = null;
