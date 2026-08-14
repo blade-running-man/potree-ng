@@ -1,5 +1,5 @@
 
-import * as THREE from "../../libs/three.js/build/three.module.js";
+import * as THREE from "three";
 import {PointCloudSM} from "../utils/PointCloudSM";
 import {EyeDomeLightingMaterial} from "../materials/EyeDomeLightingMaterial";
 import {SphereVolume} from "../utils/Volume";

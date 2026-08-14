@@ -1,5 +1,5 @@
 
-import * as THREE from "../libs/three.js/build/three.module.js";
+import * as THREE from "three";
 
 export class PathAnimation{
 	
@@ -111,21 +111,20 @@ export class AnimationPath{
 	}
 
 	getGeometry () {
-		let geometry = new THREE.Geometry();
+		let points = [];
 
 		let samples = 500;
-		let i = 0;
 		for (let u = 0; u <= 1; u += 1 / samples) {
 			let position = this.spline.getPoint(u);
-			geometry.vertices[i] = new THREE.Vector3(position.x, position.y, position.z);
-
-			i++;
+			points.push(new THREE.Vector3(position.x, position.y, position.z));
 		}
 
 		if(this.closed){
 			let position = this.spline.getPoint(0);
-			geometry.vertices[i] = new THREE.Vector3(position.x, position.y, position.z);
+			points.push(new THREE.Vector3(position.x, position.y, position.z));
 		}
+
+		let geometry = new THREE.BufferGeometry().setFromPoints(points);
 
 		return geometry;
 	}

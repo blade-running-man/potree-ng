@@ -1,5 +1,5 @@
 
-import * as THREE from "../../libs/three.js/build/three.module.js";
+import * as THREE from "three";
 import {Shaders} from "./shaders/index";
 
 //
@@ -15,6 +15,8 @@ export class EyeDomeLightingMaterial extends THREE.RawShaderMaterial{
 
 	constructor(parameters = {}){
 		super();
+
+		this.glslVersion = THREE.GLSL3;
 
 		let uniforms = {
 			screenWidth:    { type: 'f', 	value: 0 },

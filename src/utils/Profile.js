@@ -1,5 +1,5 @@
 
-import * as THREE from "../../libs/three.js/build/three.module.js";
+import * as THREE from "three";
 import {Utils} from "../utils";
 
 export class Profile extends THREE.Object3D{
@@ -84,11 +84,13 @@ export class Profile extends THREE.Object3D{
 
 		// edges & boxes
 		if (this.points.length > 1) {
-			let lineGeometry = new THREE.Geometry();
-			lineGeometry.vertices.push(new THREE.Vector3(), new THREE.Vector3());
-			lineGeometry.colors.push(this.lineColor, this.lineColor, this.lineColor);
+			let lineGeometry = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3()]);
+			lineGeometry.setAttribute('color', new THREE.Float32BufferAttribute([
+				this.lineColor.r, this.lineColor.g, this.lineColor.b,
+				this.lineColor.r, this.lineColor.g, this.lineColor.b,
+			], 3));
 			let lineMaterial = new THREE.LineBasicMaterial({
-				vertexColors: THREE.VertexColors,
+				vertexColors: true,
 				linewidth: 2,
 				transparent: true,
 				opacity: 0.4
@@ -253,14 +255,16 @@ export class Profile extends THREE.Object3D{
 			}
 
 			if (leftEdge) {
-				leftEdge.geometry.vertices[1].copy(point);
-				leftEdge.geometry.verticesNeedUpdate = true;
+				const pos = leftEdge.geometry.attributes.position;
+				pos.setXYZ(1, point.x, point.y, point.z);
+				pos.needsUpdate = true;
 				leftEdge.geometry.computeBoundingSphere();
 			}
 
 			if (rightEdge) {
-				rightEdge.geometry.vertices[0].copy(point);
-				rightEdge.geometry.verticesNeedUpdate = true;
+				const pos = rightEdge.geometry.attributes.position;
+				pos.setXYZ(0, point.x, point.y, point.z);
+				pos.needsUpdate = true;
 				rightEdge.geometry.computeBoundingSphere();
 			}
 
@@ -300,14 +304,6 @@ export class Profile extends THREE.Object3D{
 			sphere.raycast(raycaster, intersects);
 		}
 
-		// recalculate distances because they are not necessarely correct
-		// for scaled objects.
-		// see https://github.com/mrdoob/three.js/issues/5827
-		// TODO: remove this once the bug has been fixed
-		for (let i = 0; i < intersects.length; i++) {
-			let I = intersects[i];
-			I.distance = raycaster.ray.origin.distanceTo(I.point);
-		}
 		intersects.sort(function (a, b) { return a.distance - b.distance; });
 	};
 

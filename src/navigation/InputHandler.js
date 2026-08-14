@@ -4,7 +4,7 @@
  *
  */
 
-import * as THREE from "../../libs/three.js/build/three.module.js";
+import * as THREE from "three";
 import {KeyCodes} from "../KeyCodes";
 import {Utils} from "../utils";
 import {EventDispatcher} from "../EventDispatcher";

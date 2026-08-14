@@ -1,6 +1,6 @@
 
 
-import * as THREE from "../../libs/three.js/build/three.module.js";
+import * as THREE from "three";
 import {ClipVolume} from "./ClipVolume";
 import {PolygonClipVolume} from "./PolygonClipVolume";
 import { EventDispatcher } from "../EventDispatcher";

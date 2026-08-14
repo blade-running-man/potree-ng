@@ -13,7 +13,7 @@
  *
  */
 
-import * as THREE from "../../libs/three.js/build/three.module.js";
+import * as THREE from "three";
 import {MOUSE} from "../defines";
 import {Utils} from "../utils";
 import {EventDispatcher} from "../EventDispatcher";

@@ -1,5 +1,5 @@
 
-import * as THREE from "../../libs/three.js/build/three.module.js";
+import * as THREE from "three";
 import {Utils} from "../utils";
 
 export class TransformationTool {
@@ -67,36 +67,35 @@ export class TransformationTool {
 		this.initializeRotationHandles();
 
 
-		let boxFrameGeometry = new THREE.Geometry();
-		{
+		let boxFrameGeometry = new THREE.BufferGeometry().setFromPoints([
 			// bottom
-			boxFrameGeometry.vertices.push(new THREE.Vector3(-0.5, -0.5, 0.5));
-			boxFrameGeometry.vertices.push(new THREE.Vector3(0.5, -0.5, 0.5));
-			boxFrameGeometry.vertices.push(new THREE.Vector3(0.5, -0.5, 0.5));
-			boxFrameGeometry.vertices.push(new THREE.Vector3(0.5, -0.5, -0.5));
-			boxFrameGeometry.vertices.push(new THREE.Vector3(0.5, -0.5, -0.5));
-			boxFrameGeometry.vertices.push(new THREE.Vector3(-0.5, -0.5, -0.5));
-			boxFrameGeometry.vertices.push(new THREE.Vector3(-0.5, -0.5, -0.5));
-			boxFrameGeometry.vertices.push(new THREE.Vector3(-0.5, -0.5, 0.5));
+			new THREE.Vector3(-0.5, -0.5, 0.5),
+			new THREE.Vector3(0.5, -0.5, 0.5),
+			new THREE.Vector3(0.5, -0.5, 0.5),
+			new THREE.Vector3(0.5, -0.5, -0.5),
+			new THREE.Vector3(0.5, -0.5, -0.5),
+			new THREE.Vector3(-0.5, -0.5, -0.5),
+			new THREE.Vector3(-0.5, -0.5, -0.5),
+			new THREE.Vector3(-0.5, -0.5, 0.5),
 			// top
-			boxFrameGeometry.vertices.push(new THREE.Vector3(-0.5, 0.5, 0.5));
-			boxFrameGeometry.vertices.push(new THREE.Vector3(0.5, 0.5, 0.5));
-			boxFrameGeometry.vertices.push(new THREE.Vector3(0.5, 0.5, 0.5));
-			boxFrameGeometry.vertices.push(new THREE.Vector3(0.5, 0.5, -0.5));
-			boxFrameGeometry.vertices.push(new THREE.Vector3(0.5, 0.5, -0.5));
-			boxFrameGeometry.vertices.push(new THREE.Vector3(-0.5, 0.5, -0.5));
-			boxFrameGeometry.vertices.push(new THREE.Vector3(-0.5, 0.5, -0.5));
-			boxFrameGeometry.vertices.push(new THREE.Vector3(-0.5, 0.5, 0.5));
+			new THREE.Vector3(-0.5, 0.5, 0.5),
+			new THREE.Vector3(0.5, 0.5, 0.5),
+			new THREE.Vector3(0.5, 0.5, 0.5),
+			new THREE.Vector3(0.5, 0.5, -0.5),
+			new THREE.Vector3(0.5, 0.5, -0.5),
+			new THREE.Vector3(-0.5, 0.5, -0.5),
+			new THREE.Vector3(-0.5, 0.5, -0.5),
+			new THREE.Vector3(-0.5, 0.5, 0.5),
 			// sides
-			boxFrameGeometry.vertices.push(new THREE.Vector3(-0.5, -0.5, 0.5));
-			boxFrameGeometry.vertices.push(new THREE.Vector3(-0.5, 0.5, 0.5));
-			boxFrameGeometry.vertices.push(new THREE.Vector3(0.5, -0.5, 0.5));
-			boxFrameGeometry.vertices.push(new THREE.Vector3(0.5, 0.5, 0.5));
-			boxFrameGeometry.vertices.push(new THREE.Vector3(0.5, -0.5, -0.5));
-			boxFrameGeometry.vertices.push(new THREE.Vector3(0.5, 0.5, -0.5));
-			boxFrameGeometry.vertices.push(new THREE.Vector3(-0.5, -0.5, -0.5));
-			boxFrameGeometry.vertices.push(new THREE.Vector3(-0.5, 0.5, -0.5));
-		}
+			new THREE.Vector3(-0.5, -0.5, 0.5),
+			new THREE.Vector3(-0.5, 0.5, 0.5),
+			new THREE.Vector3(0.5, -0.5, 0.5),
+			new THREE.Vector3(0.5, 0.5, 0.5),
+			new THREE.Vector3(0.5, -0.5, -0.5),
+			new THREE.Vector3(0.5, 0.5, -0.5),
+			new THREE.Vector3(-0.5, -0.5, -0.5),
+			new THREE.Vector3(-0.5, 0.5, -0.5),
+		]);
 		this.frame = new THREE.LineSegments(boxFrameGeometry, new THREE.LineBasicMaterial({color: 0xffff00}));
 		this.scene.add(this.frame);
 

@@ -1,5 +1,5 @@
 
-import * as THREE from "../../libs/three.js/build/three.module.js";
+import * as THREE from "three";
 import {Utils} from "../utils";
 import {Gradients} from "./Gradients";
 import {Shaders} from "./shaders/index";
@@ -17,6 +17,12 @@ export class PointCloudMaterial extends THREE.RawShaderMaterial {
 	constructor (parameters = {}) {
 		super();
 
+		// NOTE: pointcloud.vs/.fs are compiled by Potree's custom raw-GL renderer
+		// (PotreeRenderer.Shader), which bypasses three's WebGLProgram. So three's
+		// `glslVersion` has no effect here; instead the shaders declare `#version 300 es`
+		// as their first source line (PotreeRenderer preserves it and inserts defines
+		// after it). Do NOT set `this.glslVersion` here or three would prepend a second
+		// `#version` if it ever precompiled this material.
 		this.visibleNodesTexture = Utils.generateDataTexture(2048, 1, new THREE.Color(0xffffff));
 		this.visibleNodesTexture.minFilter = THREE.NearestFilter;
 		this.visibleNodesTexture.magFilter = THREE.NearestFilter;
@@ -161,7 +167,7 @@ export class PointCloudMaterial extends THREE.RawShaderMaterial {
 		this.vertexShader = Shaders['pointcloud.vs'];
 		this.fragmentShader = Shaders['pointcloud.fs'];
 		
-		this.vertexColors = THREE.VertexColors;
+		this.vertexColors = true;
 
 		this.updateShaderSource();
 	}

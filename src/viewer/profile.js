@@ -1,5 +1,5 @@
 
-import * as THREE from "../../libs/three.js/build/three.module.js";
+import * as THREE from "three";
 import {Utils} from "../utils";
 import {Points} from "../Points";
 import {DXFProfileExporter} from "../exporter/DXFProfileExporter";
@@ -652,6 +652,8 @@ export class ProfileWindow extends EventDispatcher {
 
 	initTHREE () {
 		this.renderer = new THREE.WebGLRenderer({alpha: true, premultipliedAlpha: false});
+		// Match the main viewer: keep linear output, no r152+ color management.
+		this.renderer.outputColorSpace = THREE.LinearSRGBColorSpace;
 		this.renderer.setClearColor(0x000000, 0);
 		this.renderer.setSize(10, 10);
 		this.renderer.autoClear = false;
@@ -659,23 +661,6 @@ export class ProfileWindow extends EventDispatcher {
 		this.renderer.domElement.tabIndex = '2222';
 		$(this.renderer.domElement).css('width', '100%');
 		$(this.renderer.domElement).css('height', '100%');
-
-
-		{
-			let gl = this.renderer.getContext();
-
-			if(gl.createVertexArray == null){
-				let extVAO = gl.getExtension('OES_vertex_array_object');
-
-				if(!extVAO){
-					throw new Error("OES_vertex_array_object extension not supported");
-				}
-
-				gl.createVertexArray = extVAO.createVertexArrayOES.bind(extVAO);
-				gl.bindVertexArray = extVAO.bindVertexArrayOES.bind(extVAO);
-			}
-			
-		}
 
 		this.camera = new THREE.OrthographicCamera(-1000, 1000, 1000, -1000, -1000, 1000);
 		this.camera.up.set(0, 0, 1);
@@ -992,12 +977,12 @@ export class ProfileWindowController {
 		}
 
 		$("#potree_profile_rotate_cw").click( () => {
-			const radians = THREE.Math.degToRad(this.rotateAmount);
+			const radians = THREE.MathUtils.degToRad(this.rotateAmount);
 			rotate(-radians);
 		});
 
 		$("#potree_profile_rotate_ccw").click( () => {
-			const radians = THREE.Math.degToRad(this.rotateAmount);
+			const radians = THREE.MathUtils.degToRad(this.rotateAmount);
 			rotate(radians);
 		});
 

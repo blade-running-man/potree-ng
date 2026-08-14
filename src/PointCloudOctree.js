@@ -1,5 +1,5 @@
 
-import * as THREE from "../libs/three.js/build/three.module.js";
+import * as THREE from "three";
 import {PointCloudTree, PointCloudTreeNode} from "./PointCloudTree";
 import {PointCloudOctreeGeometryNode} from "./PointCloudOctreeGeometry";
 import {Utils} from "./utils";
@@ -769,7 +769,8 @@ export class PointCloudOctree extends PointCloudTree {
 				1, 1,
 				{ minFilter: THREE.LinearFilter,
 					magFilter: THREE.NearestFilter,
-					format: THREE.RGBAFormat }
+					format: THREE.RGBAFormat,
+					colorSpace: THREE.NoColorSpace }
 			);
 
 			this.pickState = {

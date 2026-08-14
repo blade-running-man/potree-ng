@@ -22,14 +22,16 @@
     "build:workers": "node scripts/build-esm-workers.mjs",
     "build:concat-workers": "node scripts/build-workers.mjs",
     "build:pages": "node scripts/generate-pages.mjs",
+    "build:three": "node scripts/copy-three.mjs",
     "typecheck": "tsc --noEmit",
-    "build:vite": "npm run build:lib && npm run build:workers && npm run build:concat-workers && npm run build:pages",
+    "build:vite": "npm run build:three && npm run build:lib && npm run build:workers && npm run build:concat-workers && npm run build:pages",
     "start": "npm run dev",
     "build": "npm run build:vite",
     "postinstall": "npm run build"
   },
   "dependencies": {
     "json5": "^2.1.3",
+    "three": "^0.185.0",
     "vite": "^5.4.21",
     "vite-plugin-static-copy": "^1.0.6"
   },
@@ -40,7 +42,7 @@
   "license": "BSD-2-CLAUSE",
   "devDependencies": {
     "@types/jquery": "^4.0.1",
-    "@types/three": "^0.125.3",
+    "@types/three": "^0.185.0",
     "typescript": "^5.9.3"
   }
 }

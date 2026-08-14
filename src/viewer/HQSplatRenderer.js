@@ -1,5 +1,5 @@
 
-import * as THREE from "../../libs/three.js/build/three.module.js";
+import * as THREE from "three";
 import {NormalizationMaterial} from "../materials/NormalizationMaterial";
 import {NormalizationEDLMaterial} from "../materials/NormalizationEDLMaterial";
 import {PointCloudMaterial} from "../materials/PointCloudMaterial";

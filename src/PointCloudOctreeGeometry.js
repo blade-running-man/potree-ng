@@ -1,6 +1,6 @@
 
 
-import * as THREE from "../libs/three.js/build/three.module.js";
+import * as THREE from "three";
 import {PointCloudTreeNode} from "./PointCloudTree";
 import {XHRFactory} from "./XHRFactory";
 import {Utils} from "./utils";
