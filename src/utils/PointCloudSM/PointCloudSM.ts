@@ -1,9 +1,16 @@
-
 import * as THREE from "three";
 
-export class PointCloudSM{
+import { lightToCameraParams } from "./pointCloudSMMath";
 
-	constructor(potreeRenderer){
+export class PointCloudSM {
+
+	potreeRenderer: any;
+	threeRenderer: any;
+	target: THREE.WebGLRenderTarget;
+	light: any;
+	camera!: THREE.PerspectiveCamera;
+
+	constructor (potreeRenderer: any) {
 
 		this.potreeRenderer = potreeRenderer;
 		this.threeRenderer = this.potreeRenderer.threeRenderer;
@@ -12,16 +19,13 @@ export class PointCloudSM{
 			minFilter: THREE.LinearFilter,
 			magFilter: THREE.LinearFilter,
 			format: THREE.RGBAFormat,
-			type: THREE.FloatType
+			type: THREE.FloatType,
 		});
-		this.target.depthTexture = new THREE.DepthTexture();
+		this.target.depthTexture = new THREE.DepthTexture(2 * 1024, 2 * 1024);
 		this.target.depthTexture.type = THREE.UnsignedIntType;
 
-		//this.threeRenderer.setClearColor(0x000000, 1);
 		this.threeRenderer.setClearColor(0xff0000, 1);
 
-		//HACK? removed while moving to three.js 109
-		//this.threeRenderer.clearTarget(this.target, true, true, true); 
 		{
 			const oldTarget = this.threeRenderer.getRenderTarget();
 
@@ -32,18 +36,15 @@ export class PointCloudSM{
 		}
 	}
 
-	setLight(light){
+	setLight (light: any) {
 		this.light = light;
 
-		let fov = (180 * light.angle) / Math.PI;
-		let aspect = light.shadow.mapSize.width / light.shadow.mapSize.height;
-		let near = 0.1;
-		let far = light.distance === 0 ? 10000 : light.distance;
+		const { fov, aspect, near, far } = lightToCameraParams(light);
 		this.camera = new THREE.PerspectiveCamera(fov, aspect, near, far);
 		this.camera.up.set(0, 0, 1);
 		this.camera.position.copy(light.position);
 
-		let target = new THREE.Vector3().subVectors(light.position, light.getWorldDirection(new THREE.Vector3()));
+		const target = new THREE.Vector3().subVectors(light.position, light.getWorldDirection(new THREE.Vector3()));
 		this.camera.lookAt(target);
 
 		this.camera.updateProjectionMatrix();
@@ -52,17 +53,17 @@ export class PointCloudSM{
 		this.camera.matrixWorldInverse.copy(this.camera.matrixWorld).invert();
 	}
 
-	setSize(width, height){
-		if(this.target.width !== width || this.target.height !== height){
+	setSize (width: number, height: number) {
+		if (this.target.width !== width || this.target.height !== height) {
 			this.target.dispose();
 		}
 		this.target.setSize(width, height);
 	}
 
-	render(scene, camera){
+	render (scene: any, _camera: any) {
 
 		this.threeRenderer.setClearColor(0x000000, 1);
-		
+
 		const oldTarget = this.threeRenderer.getRenderTarget();
 
 		this.threeRenderer.setRenderTarget(this.target);
@@ -72,6 +73,5 @@ export class PointCloudSM{
 
 		this.threeRenderer.setRenderTarget(oldTarget);
 	}
-
 
 }
