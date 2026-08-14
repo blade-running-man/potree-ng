@@ -17,6 +17,12 @@
   ],
   "main": "./build/potree/potree.js",
   "scripts": {
+    "dev": "vite build --watch",
+    "build:lib": "vite build",
+    "build:workers": "vite build --config vite.config.workers.js",
+    "build:concat-workers": "node scripts/build-workers.mjs",
+    "build:pages": "node scripts/generate-pages.mjs",
+    "build:vite": "npm run build:lib && npm run build:workers && npm run build:concat-workers && npm run build:pages",
     "start": "gulp watch",
     "build": "gulp build pack",
     "postinstall": "npm run build"
@@ -30,5 +36,9 @@
     "through": "~2.3.4"
   },
   "author": "Markus Schütz",
-  "license": "BSD-2-CLAUSE"
+  "license": "BSD-2-CLAUSE",
+  "devDependencies": {
+    "vite": "^5.4.21",
+    "vite-plugin-static-copy": "^1.0.6"
+  }
 }
