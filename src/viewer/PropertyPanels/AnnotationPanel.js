@@ -1,5 +1,5 @@
 
-import {Utils} from "../../utils.js";
+import {Utils} from "../../utils";
 
 export class AnnotationPanel{
 	constructor(viewer, propertiesPanel, annotation){

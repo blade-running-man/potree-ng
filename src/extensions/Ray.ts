@@ -1,7 +1,9 @@
 
 import * as THREE from "../../libs/three.js/build/three.module.js";
 
-THREE.Ray.prototype.distanceToPlaneWithNegative = function (plane) {
+// Monkey-patch: cast the prototype to `any` for assignment; `this` keeps the
+// real Ray type so the body type-checks.
+(THREE.Ray.prototype as any).distanceToPlaneWithNegative = function (this: THREE.Ray, plane: THREE.Plane): number | null {
 	let denominator = plane.normal.dot(this.direction);
 	if (denominator === 0) {
 		// line is coplanar, return origin

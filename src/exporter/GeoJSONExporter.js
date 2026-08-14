@@ -6,7 +6,7 @@
  *
  */
 
-import {Measure} from "../utils/Measure.js";
+import {Measure} from "../utils/Measure";
 
 export class GeoJSONExporter{
 

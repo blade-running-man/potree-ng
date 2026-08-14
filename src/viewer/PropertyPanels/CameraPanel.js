@@ -1,5 +1,5 @@
 
-import {Utils} from "../../utils.js";
+import {Utils} from "../../utils";
 
 export class CameraPanel{
 	constructor(viewer, propertiesPanel){

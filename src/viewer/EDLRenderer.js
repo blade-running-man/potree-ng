@@ -1,9 +1,9 @@
 
 import * as THREE from "../../libs/three.js/build/three.module.js";
-import {PointCloudSM} from "../utils/PointCloudSM.js";
-import {EyeDomeLightingMaterial} from "../materials/EyeDomeLightingMaterial.js";
-import {SphereVolume} from "../utils/Volume.js";
-import {Utils} from "../utils.js";
+import {PointCloudSM} from "../utils/PointCloudSM";
+import {EyeDomeLightingMaterial} from "../materials/EyeDomeLightingMaterial";
+import {SphereVolume} from "../utils/Volume";
+import {Utils} from "../utils";
 
 export class EDLRenderer{
 	constructor(viewer){

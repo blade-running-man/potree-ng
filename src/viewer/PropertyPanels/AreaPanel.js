@@ -1,6 +1,6 @@
 
 
-import {MeasurePanel} from "./MeasurePanel.js";
+import {MeasurePanel} from "./MeasurePanel";
 
 export class AreaPanel extends MeasurePanel{
 	constructor(viewer, measurement, propertiesPanel){

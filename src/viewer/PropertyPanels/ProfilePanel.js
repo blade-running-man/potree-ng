@@ -1,6 +1,6 @@
 
 import * as THREE from "../../../libs/three.js/build/three.module.js";
-import {MeasurePanel} from "./MeasurePanel.js";
+import {MeasurePanel} from "./MeasurePanel";
 
 export class ProfilePanel extends MeasurePanel{
 	constructor(viewer, measurement, propertiesPanel){

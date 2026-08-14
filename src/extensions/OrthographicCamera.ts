@@ -1,7 +1,10 @@
 
 import * as THREE from "../../libs/three.js/build/three.module.js";
 
-THREE.OrthographicCamera.prototype.zoomTo = function( node, factor = 1){
+// Monkey-patch: cast the prototype to `any` for assignment; `this` keeps the
+// real camera type so the body type-checks. Proper module augmentation for
+// callers is deferred (the split @types/three layout shadows the class).
+(THREE.OrthographicCamera.prototype as any).zoomTo = function (this: THREE.OrthographicCamera, node: any, factor = 1) {
 
 	if ( !node.geometry && !node.boundingBox) {
 		return;
@@ -16,5 +19,5 @@ THREE.OrthographicCamera.prototype.zoomTo = function( node, factor = 1){
 	//let bottom	= node.boundingBox.min.y;
 	//let top = node.boundingBox.max.y;
 
-	this.updateProjectionMatrix();	
+	this.updateProjectionMatrix();
 };

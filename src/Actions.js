@@ -1,6 +1,6 @@
 
 
-import {EventDispatcher} from "./EventDispatcher.js";
+import {EventDispatcher} from "./EventDispatcher";
 
 export class Action extends EventDispatcher {
 	constructor (args = {}) {

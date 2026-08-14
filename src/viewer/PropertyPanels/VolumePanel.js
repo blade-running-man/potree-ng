@@ -1,9 +1,9 @@
 
 import * as THREE from "../../../libs/three.js/build/three.module.js";
-import {Utils} from "../../utils.js";
-import {Volume, BoxVolume, SphereVolume} from "../../utils/Volume.js";
+import {Utils} from "../../utils";
+import {Volume, BoxVolume, SphereVolume} from "../../utils/Volume";
 
-import {MeasurePanel} from "./MeasurePanel.js";
+import {MeasurePanel} from "./MeasurePanel";
 
 export class VolumePanel extends MeasurePanel{
 	constructor(viewer, measurement, propertiesPanel){

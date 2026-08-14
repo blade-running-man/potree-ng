@@ -1,15 +1,15 @@
 
 import * as THREE from "../../libs/three.js/build/three.module.js";
-import {Utils} from "../utils.js";
-import {Points} from "../Points.js";
-import {DXFProfileExporter} from "../exporter/DXFProfileExporter.js";
-import {CSVExporter} from "../exporter/CSVExporter.js";
-import {LASExporter} from "../exporter/LASExporter.js";
-import { EventDispatcher } from "../EventDispatcher.js";
-import {PointCloudTree} from "../PointCloudTree.js";
-import {Renderer} from "../PotreeRenderer.js";
-import {PointCloudMaterial} from "../materials/PointCloudMaterial.js";
-import {PointSizeType} from "../defines.js";
+import {Utils} from "../utils";
+import {Points} from "../Points";
+import {DXFProfileExporter} from "../exporter/DXFProfileExporter";
+import {CSVExporter} from "../exporter/CSVExporter";
+import {LASExporter} from "../exporter/LASExporter";
+import { EventDispatcher } from "../EventDispatcher";
+import {PointCloudTree} from "../PointCloudTree";
+import {Renderer} from "../PotreeRenderer";
+import {PointCloudMaterial} from "../materials/PointCloudMaterial";
+import {PointSizeType} from "../defines";
 
 
 function copyMaterial(source, target){

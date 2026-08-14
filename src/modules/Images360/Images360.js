@@ -1,7 +1,7 @@
 
 import * as THREE from "../../../libs/three.js/build/three.module.js";
-import { EventDispatcher } from "../../EventDispatcher.js";
-import {TextSprite} from "../../TextSprite.js";
+import { EventDispatcher } from "../../EventDispatcher";
+import {TextSprite} from "../../TextSprite";
 
 let sg = new THREE.SphereGeometry(1, 8, 8);
 let sgHigh = new THREE.SphereGeometry(1, 128, 128);

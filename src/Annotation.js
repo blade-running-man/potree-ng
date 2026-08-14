@@ -1,9 +1,9 @@
 
 
 import * as THREE from "../libs/three.js/build/three.module.js";
-import {Action} from "./Actions.js";
-import {Utils} from "./utils.js";
-import {EventDispatcher} from "./EventDispatcher.js";
+import {Action} from "./Actions";
+import {Utils} from "./utils";
+import {EventDispatcher} from "./EventDispatcher";
 
 export class Annotation extends EventDispatcher {
 	constructor (args = {}) {

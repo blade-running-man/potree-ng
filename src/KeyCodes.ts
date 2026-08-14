@@ -16,5 +16,5 @@ export const KeyCodes = {
 	E: 'E'.charCodeAt(0),
 	R: 'R'.charCodeAt(0),
 	F: 'F'.charCodeAt(0)
-	
+
 };

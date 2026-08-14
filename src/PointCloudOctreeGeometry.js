@@ -1,9 +1,9 @@
 
 
 import * as THREE from "../libs/three.js/build/three.module.js";
-import {PointCloudTreeNode} from "./PointCloudTree.js";
-import {XHRFactory} from "./XHRFactory.js";
-import {Utils} from "./utils.js";
+import {PointCloudTreeNode} from "./PointCloudTree";
+import {XHRFactory} from "./XHRFactory";
+import {Utils} from "./utils";
 
 export class PointCloudOctreeGeometry{
 

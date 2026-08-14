@@ -1,10 +1,10 @@
 
 import * as THREE from "../../libs/three.js/build/three.module.js";
-import {Annotation} from "../Annotation.js";
-import {Measure} from "../utils/Measure.js";
-import {CameraAnimation} from "../modules/CameraAnimation/CameraAnimation.js";
-import {Utils} from "../utils.js";
-import {PointSizeType} from "../defines.js";
+import {Annotation} from "../Annotation";
+import {Measure} from "../utils/Measure";
+import {CameraAnimation} from "../modules/CameraAnimation/CameraAnimation";
+import {Utils} from "../utils";
+import {PointSizeType} from "../defines";
 
 function loadPointCloud(viewer, data){
 

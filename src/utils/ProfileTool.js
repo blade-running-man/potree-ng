@@ -1,8 +1,8 @@
 
 import * as THREE from "../../libs/three.js/build/three.module.js";
-import {Profile} from "./Profile.js";
-import {Utils} from "../utils.js";
-import { EventDispatcher } from "../EventDispatcher.js";
+import {Profile} from "./Profile";
+import {Utils} from "../utils";
+import { EventDispatcher } from "../EventDispatcher";
 
 
 export class ProfileTool extends EventDispatcher {

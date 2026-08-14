@@ -3,7 +3,7 @@ import * as THREE from "../../libs/three.js/build/three.module.js";
 import {Line2} from "../../libs/three.js/lines/Line2.js";
 import {LineGeometry} from "../../libs/three.js/lines/LineGeometry.js";
 import {LineMaterial} from "../../libs/three.js/lines/LineMaterial.js";
-import {Utils} from "../utils.js";
+import {Utils} from "../utils";
 
 const defaultColors = {
 	"landuse":   [0.5, 0.5, 0.5],

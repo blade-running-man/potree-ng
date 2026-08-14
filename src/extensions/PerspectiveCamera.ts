@@ -1,7 +1,9 @@
 
 import * as THREE from "../../libs/three.js/build/three.module.js";
 
-THREE.PerspectiveCamera.prototype.zoomTo = function (node, factor) {
+// Monkey-patch: cast the prototype to `any` for assignment; `this` keeps the
+// real camera type so the body type-checks.
+(THREE.PerspectiveCamera.prototype as any).zoomTo = function (this: THREE.PerspectiveCamera, node: any, factor?: number) {
 	if (!node.geometry && !node.boundingSphere && !node.boundingBox) {
 		return;
 	}

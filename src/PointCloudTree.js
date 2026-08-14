@@ -1,6 +1,6 @@
 
 import * as THREE from "../libs/three.js/build/three.module.js";
-import { EventDispatcher } from "./EventDispatcher.js";
+import { EventDispatcher } from "./EventDispatcher";
 
 
 export class PointCloudTreeNode extends EventDispatcher{

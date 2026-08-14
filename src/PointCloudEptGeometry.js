@@ -1,5 +1,5 @@
-import {PointCloudTreeNode} from "./PointCloudTree.js";
-import {PointAttributes, PointAttribute, PointAttributeTypes} from "./loader/PointAttributes.js";
+import {PointCloudTreeNode} from "./PointCloudTree";
+import {PointAttributes, PointAttribute, PointAttributeTypes} from "./loader/PointAttributes";
 import * as THREE from "../libs/three.js/build/three.module.js";
 
 class U {

@@ -1,9 +1,9 @@
 
 import * as THREE from "../../libs/three.js/build/three.module.js";
-import {BoxVolume} from "./Volume.js";
-import {Utils} from "../utils.js";
-import {PointSizeType} from "../defines.js";
-import { EventDispatcher } from "../EventDispatcher.js";
+import {BoxVolume} from "./Volume";
+import {Utils} from "../utils";
+import {PointSizeType} from "../defines";
+import { EventDispatcher } from "../EventDispatcher";
 
 
 export class ScreenBoxSelectTool extends EventDispatcher{

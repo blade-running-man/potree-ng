@@ -1,10 +1,10 @@
 
 import * as THREE from "../../libs/three.js/build/three.module.js";
-import {Utils} from "../utils.js";
-import {Gradients} from "./Gradients.js";
-import {Shaders} from "./shaders/index.js";
-import {ClassificationScheme} from "./ClassificationScheme.js";
-import {PointSizeType, PointShape, TreeType, ElevationGradientRepeat} from "../defines.js";
+import {Utils} from "../utils";
+import {Gradients} from "./Gradients";
+import {Shaders} from "./shaders/index";
+import {ClassificationScheme} from "./ClassificationScheme";
+import {PointSizeType, PointShape, TreeType, ElevationGradientRepeat} from "../defines";
 
 //
 // how to calculate the radius of a projected sphere in screen space

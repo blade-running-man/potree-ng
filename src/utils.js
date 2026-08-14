@@ -1,10 +1,10 @@
 
 import * as THREE from "../libs/three.js/build/three.module.js";
-import {XHRFactory} from "./XHRFactory.js";
-import {Volume} from "./utils/Volume.js";
-import {Profile} from "./utils/Profile.js";
-import {Measure} from "./utils/Measure.js";
-import {PolygonClipVolume} from "./utils/PolygonClipVolume.js";
+import {XHRFactory} from "./XHRFactory";
+import {Volume} from "./utils/Volume";
+import {Profile} from "./utils/Profile";
+import {Measure} from "./utils/Measure";
+import {PolygonClipVolume} from "./utils/PolygonClipVolume";
 
 export class Utils {
 	static async loadShapefileFeatures (file, callback) {

@@ -1,10 +1,10 @@
 
 
 import * as THREE from "../../libs/three.js/build/three.module.js";
-import {PointCloudTree, PointCloudTreeNode} from "../PointCloudTree.js";
-import {PointCloudMaterial} from "../materials/PointCloudMaterial.js";
-import {PointSizeType, ClipTask, TreeType} from "../defines.js";
-import {Utils} from "../utils.js";
+import {PointCloudTree, PointCloudTreeNode} from "../PointCloudTree";
+import {PointCloudMaterial} from "../materials/PointCloudMaterial";
+import {PointSizeType, ClipTask, TreeType} from "../defines";
+import {Utils} from "../utils";
 
 
 

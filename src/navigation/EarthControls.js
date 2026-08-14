@@ -1,8 +1,8 @@
 
 import * as THREE from "../../libs/three.js/build/three.module.js";
-import {MOUSE} from "../defines.js";
-import {Utils} from "../utils.js";
-import {EventDispatcher} from "../EventDispatcher.js";
+import {MOUSE} from "../defines";
+import {Utils} from "../utils";
+import {EventDispatcher} from "../EventDispatcher";
 
 export class EarthControls extends EventDispatcher {
 	constructor (viewer) {
