@@ -19,7 +19,7 @@
   "scripts": {
     "dev": "vite build --watch",
     "build:lib": "vite build",
-    "build:workers": "vite build --config vite.config.workers.js",
+    "build:workers": "node scripts/build-esm-workers.mjs",
     "build:concat-workers": "node scripts/build-workers.mjs",
     "build:pages": "node scripts/generate-pages.mjs",
     "build:vite": "npm run build:lib && npm run build:workers && npm run build:concat-workers && npm run build:pages",
