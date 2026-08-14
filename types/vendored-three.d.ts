@@ -1,25 +1,20 @@
-// The vendored three *build* (build/three.module.js) is typed by a co-located
-// declaration file at libs/three.js/build/three.module.d.ts (a real module,
-// which preserves class inheritance). See that file for why an ambient wildcard
-// is NOT used for it.
+// three.js is now an npm dependency ("three@^0.185"), typed by @types/three.
 //
-// The three add-ons below (examples/jsm equivalents) are also vendored but are
-// NOT part of the core `three` types, so they are declared permissively here via
-// ambient wildcard modules. `any` is fine for them (no inheritance to preserve);
-// tighten to real typings when a `.ts` file first imports them.
+// - Core imports use the bare package specifier `"three"` (typed by
+//   @types/three's index).
+// - Add-on imports use the package subpath `"three/addons/*"` (e.g.
+//   `three/addons/lines/Line2.js`, `three/addons/webxr/XRControllerModelFactory.js`),
+//   which maps to three's `examples/jsm/*` and is typed by
+//   @types/three/examples/jsm.
+//
+// Because @types/three now supplies types for both the core and the add-ons,
+// no ambient wildcard module shims are required here anymore. The previous
+// `declare module "*three.js/lines/*"` blocks (which shimmed the vendored
+// add-on copies) have been removed.
+//
+// The vendored copies under `libs/three.js/**` are still referenced by files
+// in `examples/`, but that directory is excluded from tsconfig, so those paths
+// do not need shims for `tsc` to stay clean. This file is retained as
+// documentation and as a home for any future three-related ambient types.
 
-declare module "*three.js/lines/Line2.js" {
-  export const Line2: any;
-}
-declare module "*three.js/lines/LineGeometry.js" {
-  export const LineGeometry: any;
-}
-declare module "*three.js/lines/LineMaterial.js" {
-  export const LineMaterial: any;
-}
-declare module "*three.js/lines/LineSegments2.js" {
-  export const LineSegments2: any;
-}
-declare module "*three.js/lines/LineSegmentsGeometry.js" {
-  export const LineSegmentsGeometry: any;
-}
+export {};

@@ -1,5 +1,5 @@
 
-import * as THREE from "../libs/three.js/build/three.module.js";
+import * as THREE from "three";
 import {XHRFactory} from "./XHRFactory";
 import {Volume} from "./utils/Volume";
 import {Profile} from "./utils/Profile";

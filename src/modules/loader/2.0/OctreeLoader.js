@@ -1,5 +1,5 @@
 
-import * as THREE from "../../../../libs/three.js/build/three.module.js";
+import * as THREE from "three";
 import {PointAttribute, PointAttributes, PointAttributeTypes} from "../../../loader/PointAttributes";
 import {OctreeGeometry, OctreeGeometryNode} from "./OctreeGeometry";
 

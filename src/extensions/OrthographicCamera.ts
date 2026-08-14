@@ -1,5 +1,5 @@
 
-import * as THREE from "../../libs/three.js/build/three.module.js";
+import * as THREE from "three";
 
 // Monkey-patch: cast the prototype to `any` for assignment; `this` keeps the
 // real camera type so the body type-checks. Proper module augmentation for

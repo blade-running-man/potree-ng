@@ -1,5 +1,5 @@
 
-import * as THREE from "../../libs/three.js/build/three.module.js";
+import * as THREE from "three";
 import {Measure} from "./Measure";
 import {Utils} from "../utils";
 import {CameraMode} from "../defines";

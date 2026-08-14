@@ -1,5 +1,5 @@
 
-import * as THREE from "../libs/three.js/build/three.module.js";
+import * as THREE from "three";
 import {PointCloudTree, PointCloudTreeNode} from "./PointCloudTree";
 import {PointCloudOctreeGeometryNode} from "./PointCloudOctreeGeometry";
 import {Utils} from "./utils";

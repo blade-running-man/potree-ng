@@ -1,5 +1,5 @@
 
-import * as THREE from "../../libs/three.js/build/three.module.js";
+import * as THREE from "three";
 import {ClipTask, ClipMethod, CameraMode, LengthUnits, ElevationGradientRepeat} from "../defines";
 import {Renderer} from "../PotreeRenderer";
 import {PotreeRenderer} from "./PotreeRenderer";
