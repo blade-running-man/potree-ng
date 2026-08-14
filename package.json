@@ -24,6 +24,8 @@
     "build:pages": "node scripts/generate-pages.mjs",
     "build:three": "node scripts/copy-three.mjs",
     "typecheck": "tsc --noEmit",
+    "test": "vitest",
+    "test:run": "vitest run",
     "build:vite": "npm run build:three && npm run build:lib && npm run build:workers && npm run build:concat-workers && npm run build:pages",
     "start": "npm run dev",
     "build": "npm run build:vite",
@@ -32,8 +34,8 @@
   "dependencies": {
     "json5": "^2.1.3",
     "three": "^0.185.0",
-    "vite": "^5.4.21",
-    "vite-plugin-static-copy": "^1.0.6"
+    "vite": "^8.2.1",
+    "vite-plugin-static-copy": "^4.1.1"
   },
   "engines": {
     "node": ">=18"
@@ -43,6 +45,8 @@
   "devDependencies": {
     "@types/jquery": "^4.0.1",
     "@types/three": "^0.185.0",
-    "typescript": "^5.9.3"
+    "jsdom": "^25.0.1",
+    "typescript": "^5.9.3",
+    "vitest": "^4.1.10"
   }
 }

@@ -112,7 +112,9 @@ if (document.currentScript && document.currentScript.src) {
 	if (scriptPath.slice(-1) === '/') {
 		scriptPath = scriptPath.slice(0, -1);
 	}
-} else if(import.meta){
+} else if(import.meta && import.meta.url){
+	// Note: with Vite 8's Rolldown bundler, `import.meta` is replaced by `{}` in
+	// the UMD build, so guard on `import.meta.url` to avoid `new URL(undefined)`.
 	scriptPath = new URL(import.meta.url + "/..").href;
 	if (scriptPath.slice(-1) === '/') {
 		scriptPath = scriptPath.slice(0, -1);
