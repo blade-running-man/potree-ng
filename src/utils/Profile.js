@@ -90,7 +90,7 @@ export class Profile extends THREE.Object3D{
 				this.lineColor.r, this.lineColor.g, this.lineColor.b,
 			], 3));
 			let lineMaterial = new THREE.LineBasicMaterial({
-				vertexColors: THREE.VertexColors,
+				vertexColors: true,
 				linewidth: 2,
 				transparent: true,
 				opacity: 0.4
