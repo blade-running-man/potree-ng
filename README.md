@@ -32,8 +32,12 @@ npm run build
 
 ### Run on your PC
 
-Use the `npm start` command to watch the source code and automatically rebuild
-`./build/potree` on every change (this runs `vite build --watch`).
+Use the `npm start` command to watch the source and automatically rebuild the main
+bundle `build/potree/potree.js` (and re-copy the static assets) on every change
+(this runs `vite build --watch`). Shaders are part of the bundle, so shader edits
+are picked up too. If you change a **worker** (`src/workers/**`,
+`src/modules/loader/2.0/**`) or an **examples page** source, re-run the full build
+with `npm run build`.
 
 `npm start` no longer starts a web server on its own (the old gulp-connect server
 was removed together with gulp). In a second terminal, serve the project directory
