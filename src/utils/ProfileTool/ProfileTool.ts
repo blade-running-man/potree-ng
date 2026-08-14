@@ -1,20 +1,28 @@
-
 import * as THREE from "three";
-import {Profile} from "./Profile";
-import {Utils} from "../utils";
-import { EventDispatcher } from "../EventDispatcher";
+import { Profile } from "../Profile";
+import { Utils } from "../../utils";
+import { EventDispatcher } from "../../EventDispatcher";
 
+import { screenConstantScale } from "./profileToolMath";
 
 export class ProfileTool extends EventDispatcher {
-	constructor (viewer) {
+
+	viewer: any;
+	renderer: any;
+	scene: THREE.Scene;
+	light: THREE.PointLight;
+	onRemove: (e: any) => void;
+	onAdd: (e: any) => void;
+
+	constructor (viewer: any) {
 		super();
 
 		this.viewer = viewer;
 		this.renderer = viewer.renderer;
 
-		this.addEventListener('start_inserting_profile', e => {
+		this.addEventListener('start_inserting_profile', () => {
 			this.viewer.dispatchEvent({
-				type: 'cancel_insertions'
+				type: 'cancel_insertions',
 			});
 		});
 
@@ -25,11 +33,11 @@ export class ProfileTool extends EventDispatcher {
 
 		this.viewer.inputHandler.registerInteractiveScene(this.scene);
 
-		this.onRemove = e => this.scene.remove(e.profile);
-		this.onAdd = e => this.scene.add(e.profile);
+		this.onRemove = (e: any) => this.scene.remove(e.profile);
+		this.onAdd = (e: any) => this.scene.add(e.profile);
 
-		for(let profile of viewer.scene.profiles){
-			this.onAdd({profile: profile});
+		for (const profile of viewer.scene.profiles) {
+			this.onAdd({ profile: profile });
 		}
 
 		viewer.addEventListener("update", this.update.bind(this));
@@ -40,41 +48,39 @@ export class ProfileTool extends EventDispatcher {
 		viewer.scene.addEventListener('profile_removed', this.onRemove);
 	}
 
-	onSceneChange(e){
-		if(e.oldScene){
-			e.oldScene.removeEventListeners('profile_added', this.onAdd);
-			e.oldScene.removeEventListeners('profile_removed', this.onRemove);
+	onSceneChange (e: any) {
+		if (e.oldScene) {
+			e.oldScene.removeEventListener('profile_added', this.onAdd);
+			e.oldScene.removeEventListener('profile_removed', this.onRemove);
 		}
 
 		e.scene.addEventListener('profile_added', this.onAdd);
 		e.scene.addEventListener('profile_removed', this.onRemove);
 	}
 
-	startInsertion (args = {}) {
-		let domElement = this.viewer.renderer.domElement;
+	startInsertion (args: any = {}) {
+		const domElement = this.viewer.renderer.domElement;
 
-		let profile = new Profile();
+		const profile = new Profile();
 		profile.name = args.name || 'Profile';
 
 		this.dispatchEvent({
 			type: 'start_inserting_profile',
-			profile: profile
+			profile: profile,
 		});
 
 		this.scene.add(profile);
 
-		let cancel = {
-			callback: null
-		};
+		const cancel: { callback: (e?: any) => void } = { callback: () => {} };
 
-		let insertionCallback = (e) => {
-			if(e.button === THREE.MOUSE.LEFT){
-				if(profile.points.length <= 1){
-					let camera = this.viewer.scene.getActiveCamera();
-					let distance = camera.position.distanceTo(profile.points[0]);
-					let clientSize = this.viewer.renderer.getSize(new THREE.Vector2());
-					let pr = Utils.projectedRadius(1, camera, distance, clientSize.width, clientSize.height);
-					let width = (10 / pr);
+		const insertionCallback = (e: any) => {
+			if (e.button === THREE.MOUSE.LEFT) {
+				if (profile.points.length <= 1) {
+					const camera = this.viewer.scene.getActiveCamera();
+					const distance = camera.position.distanceTo(profile.points[0]);
+					const clientSize = this.viewer.renderer.getSize(new THREE.Vector2());
+					const pr = Utils.projectedRadius(1, camera, distance, clientSize.width, clientSize.height);
+					const width = screenConstantScale(pr, 10);
 
 					profile.setWidth(width);
 				}
@@ -88,7 +94,7 @@ export class ProfileTool extends EventDispatcher {
 			}
 		};
 
-		cancel.callback = e => {
+		cancel.callback = () => {
 			profile.removeMarker(profile.points.length - 1);
 			domElement.removeEventListener('mouseup', insertionCallback, false);
 			this.viewer.removeEventListener('cancel_insertions', cancel.callback);
@@ -105,28 +111,28 @@ export class ProfileTool extends EventDispatcher {
 
 		return profile;
 	}
-	
-	update(){
-		let camera = this.viewer.scene.getActiveCamera();
-		let profiles = this.viewer.scene.profiles;
-		let renderAreaSize = this.viewer.renderer.getSize(new THREE.Vector2());
-		let clientWidth = renderAreaSize.width;
-		let clientHeight = renderAreaSize.height;
+
+	update () {
+		const camera = this.viewer.scene.getActiveCamera();
+		const profiles = this.viewer.scene.profiles;
+		const renderAreaSize = this.viewer.renderer.getSize(new THREE.Vector2());
+		const clientWidth = renderAreaSize.width;
+		const clientHeight = renderAreaSize.height;
 
 		this.light.position.copy(camera.position);
 
-		// make size independant of distance
-		for(let profile of profiles){
-			for(let sphere of profile.spheres){				
-				let distance = camera.position.distanceTo(sphere.getWorldPosition(new THREE.Vector3()));
-				let pr = Utils.projectedRadius(1, camera, distance, clientWidth, clientHeight);
-				let scale = (15 / pr);
+		// make size independent of distance
+		for (const profile of profiles) {
+			for (const sphere of profile.spheres) {
+				const distance = camera.position.distanceTo(sphere.getWorldPosition(new THREE.Vector3()));
+				const pr = Utils.projectedRadius(1, camera, distance, clientWidth, clientHeight);
+				const scale = screenConstantScale(pr, 15);
 				sphere.scale.set(scale, scale, scale);
 			}
 		}
 	}
 
-	render(){
+	render () {
 		this.viewer.renderer.render(this.scene, this.viewer.scene.getActiveCamera());
 	}
 
