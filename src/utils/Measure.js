@@ -841,14 +841,6 @@ export class Measure extends THREE.Object3D {
 			sphere.raycast(raycaster, intersects);
 		}
 
-		// recalculate distances because they are not necessarely correct
-		// for scaled objects.
-		// see https://github.com/mrdoob/three.js/issues/5827
-		// TODO: remove this once the bug has been fixed
-		for (let i = 0; i < intersects.length; i++) {
-			let I = intersects[i];
-			I.distance = raycaster.ray.origin.distanceTo(I.point);
-		}
 		intersects.sort(function (a, b) { return a.distance - b.distance; });
 	};
 
