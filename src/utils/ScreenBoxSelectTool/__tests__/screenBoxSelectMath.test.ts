@@ -61,6 +61,15 @@ describe("resolveBoxDepth", () => {
 		expect(depth!.centroid.toArray()).toEqual([0, 0, 5]);
 	});
 
+	it("picks the extremes out of many points, ignoring interior ones", () => {
+		const viewLine = new THREE.Line3(v3(0, 0, 0), v3(0, 0, 1));
+		const near = [v3(0, 0, 3), v3(0, 0, 1), v3(0, 0, 2)]; // nearest to origin = (0,0,1)
+		const far = [v3(0, 0, 7), v3(0, 0, 9), v3(0, 0, 8)]; // farthest from origin = (0,0,9)
+		const depth = resolveBoxDepth(near, far, viewLine, v3(0, 0, 0));
+		expect(depth!.distance).toBeCloseTo(8, 10);
+		expect(depth!.centroid.toArray()).toEqual([0, 0, 5]);
+	});
+
 	it("is null when either set is empty", () => {
 		const viewLine = new THREE.Line3(v3(0, 0, 0), v3(0, 0, 1));
 		expect(resolveBoxDepth([], [v3(0, 0, 9)], viewLine, v3(0, 0, 0))).toBeNull();
