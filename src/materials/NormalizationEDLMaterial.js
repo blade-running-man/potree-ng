@@ -8,6 +8,8 @@ export class NormalizationEDLMaterial extends THREE.RawShaderMaterial{
 	constructor(parameters = {}){
 		super();
 
+		this.glslVersion = THREE.GLSL3;
+
 		let uniforms = {
 			screenWidth:    { type: 'f',   value: 0 },
 			screenHeight:   { type: 'f',   value: 0 },
