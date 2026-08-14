@@ -114,11 +114,11 @@ export class BoxVolume extends Volume{
 		let boxGeometry = new THREE.BoxGeometry(1, 1, 1);
 		boxGeometry.computeBoundingBox();
 
-		let boxFrameGeometry = new THREE.Geometry();
+		let boxFrameGeometry;
 		{
 			let Vector3 = THREE.Vector3;
 
-			boxFrameGeometry.vertices.push(
+			boxFrameGeometry = new THREE.BufferGeometry().setFromPoints([
 
 				// bottom
 				new Vector3(-0.5, -0.5, 0.5),
@@ -148,7 +148,7 @@ export class BoxVolume extends Volume{
 				new Vector3(-0.5, -0.5, -0.5),
 				new Vector3(-0.5, 0.5, -0.5),
 
-			);
+			]);
 
 		}
 
@@ -229,7 +229,7 @@ export class SphereVolume extends Volume{
 		this.label.visible = false;
 
 
-		let frameGeometry = new THREE.Geometry();
+		let framePoints = [];
 		{
 			let steps = 64;
 			let uSegments = 8;
@@ -253,10 +253,10 @@ export class SphereVolume extends Volume{
 					let xyAmountNext = Math.cos(vNext);
 
 					let vertex = new THREE.Vector3(dirx * xyAmount, diry * xyAmount, height);
-					frameGeometry.vertices.push(vertex);
+					framePoints.push(vertex);
 
 					let vertexNext = new THREE.Vector3(dirx * xyAmountNext, diry * xyAmountNext, heightNext);
-					frameGeometry.vertices.push(vertexNext);
+					framePoints.push(vertexNext);
 				}
 			}
 
@@ -283,14 +283,15 @@ export class SphereVolume extends Volume{
 					let xyAmount = Math.sqrt(1 - height * height);
 
 					let vertex = new THREE.Vector3(dirx * xyAmount, diry * xyAmount, height);
-					frameGeometry.vertices.push(vertex);
+					framePoints.push(vertex);
 
 					let vertexNext = new THREE.Vector3(dirxNext * xyAmount, diryNext * xyAmount, height);
-					frameGeometry.vertices.push(vertexNext);
+					framePoints.push(vertexNext);
 				}
 			}
 		}
 
+		let frameGeometry = new THREE.BufferGeometry().setFromPoints(framePoints);
 		this.frame = new THREE.LineSegments(frameGeometry, new THREE.LineBasicMaterial({color: 0x000000}));
 		this.add(this.frame);
 

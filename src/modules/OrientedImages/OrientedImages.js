@@ -53,15 +53,13 @@ function createMaterial(){
 }
 
 const planeGeometry = new THREE.PlaneGeometry(1, 1);
-const lineGeometry = new THREE.Geometry();
-
-lineGeometry.vertices.push(
+const lineGeometry = new THREE.BufferGeometry().setFromPoints([
 	new THREE.Vector3(-0.5, -0.5, 0),
 	new THREE.Vector3( 0.5, -0.5, 0),
 	new THREE.Vector3( 0.5,  0.5, 0),
 	new THREE.Vector3(-0.5,  0.5, 0),
 	new THREE.Vector3(-0.5, -0.5, 0),
-);
+]);
 
 export class OrientedImage{
 

@@ -23,51 +23,47 @@ export class ClipVolume extends THREE.Object3D{
 		let boxGeometry = new THREE.BoxGeometry(1, 1, 1);
 		boxGeometry.computeBoundingBox();
 		
-		let boxFrameGeometry = new THREE.Geometry();
-		{			
+		let boxFrameGeometry = new THREE.BufferGeometry().setFromPoints([
 			// bottom
-			boxFrameGeometry.vertices.push(new THREE.Vector3(-0.5, -0.5, 0.5));
-			boxFrameGeometry.vertices.push(new THREE.Vector3(0.5, -0.5, 0.5));
-			boxFrameGeometry.vertices.push(new THREE.Vector3(0.5, -0.5, 0.5));
-			boxFrameGeometry.vertices.push(new THREE.Vector3(0.5, -0.5, -0.5));
-			boxFrameGeometry.vertices.push(new THREE.Vector3(0.5, -0.5, -0.5));
-			boxFrameGeometry.vertices.push(new THREE.Vector3(-0.5, -0.5, -0.5));
-			boxFrameGeometry.vertices.push(new THREE.Vector3(-0.5, -0.5, -0.5));
-			boxFrameGeometry.vertices.push(new THREE.Vector3(-0.5, -0.5, 0.5));
+			new THREE.Vector3(-0.5, -0.5, 0.5),
+			new THREE.Vector3(0.5, -0.5, 0.5),
+			new THREE.Vector3(0.5, -0.5, 0.5),
+			new THREE.Vector3(0.5, -0.5, -0.5),
+			new THREE.Vector3(0.5, -0.5, -0.5),
+			new THREE.Vector3(-0.5, -0.5, -0.5),
+			new THREE.Vector3(-0.5, -0.5, -0.5),
+			new THREE.Vector3(-0.5, -0.5, 0.5),
 			// top
-			boxFrameGeometry.vertices.push(new THREE.Vector3(-0.5, 0.5, 0.5));
-			boxFrameGeometry.vertices.push(new THREE.Vector3(0.5, 0.5, 0.5));
-			boxFrameGeometry.vertices.push(new THREE.Vector3(0.5, 0.5, 0.5));
-			boxFrameGeometry.vertices.push(new THREE.Vector3(0.5, 0.5, -0.5));
-			boxFrameGeometry.vertices.push(new THREE.Vector3(0.5, 0.5, -0.5));
-			boxFrameGeometry.vertices.push(new THREE.Vector3(-0.5, 0.5, -0.5));
-			boxFrameGeometry.vertices.push(new THREE.Vector3(-0.5, 0.5, -0.5));
-			boxFrameGeometry.vertices.push(new THREE.Vector3(-0.5, 0.5, 0.5));
+			new THREE.Vector3(-0.5, 0.5, 0.5),
+			new THREE.Vector3(0.5, 0.5, 0.5),
+			new THREE.Vector3(0.5, 0.5, 0.5),
+			new THREE.Vector3(0.5, 0.5, -0.5),
+			new THREE.Vector3(0.5, 0.5, -0.5),
+			new THREE.Vector3(-0.5, 0.5, -0.5),
+			new THREE.Vector3(-0.5, 0.5, -0.5),
+			new THREE.Vector3(-0.5, 0.5, 0.5),
 			// sides
-			boxFrameGeometry.vertices.push(new THREE.Vector3(-0.5, -0.5, 0.5));
-			boxFrameGeometry.vertices.push(new THREE.Vector3(-0.5, 0.5, 0.5));
-			boxFrameGeometry.vertices.push(new THREE.Vector3(0.5, -0.5, 0.5));
-			boxFrameGeometry.vertices.push(new THREE.Vector3(0.5, 0.5, 0.5));
-			boxFrameGeometry.vertices.push(new THREE.Vector3(0.5, -0.5, -0.5));
-			boxFrameGeometry.vertices.push(new THREE.Vector3(0.5, 0.5, -0.5));
-			boxFrameGeometry.vertices.push(new THREE.Vector3(-0.5, -0.5, -0.5));
-			boxFrameGeometry.vertices.push(new THREE.Vector3(-0.5, 0.5, -0.5));
+			new THREE.Vector3(-0.5, -0.5, 0.5),
+			new THREE.Vector3(-0.5, 0.5, 0.5),
+			new THREE.Vector3(0.5, -0.5, 0.5),
+			new THREE.Vector3(0.5, 0.5, 0.5),
+			new THREE.Vector3(0.5, -0.5, -0.5),
+			new THREE.Vector3(0.5, 0.5, -0.5),
+			new THREE.Vector3(-0.5, -0.5, -0.5),
+			new THREE.Vector3(-0.5, 0.5, -0.5),
+		]);
 
-			boxFrameGeometry.colors.push(new THREE.Vector3(1, 1, 1));
-		}
-
-		let planeFrameGeometry = new THREE.Geometry();
-		{						
+		let planeFrameGeometry = new THREE.BufferGeometry().setFromPoints([
 			// middle line
-			planeFrameGeometry.vertices.push(new THREE.Vector3(-0.5, -0.5, 0.0));
-			planeFrameGeometry.vertices.push(new THREE.Vector3(-0.5, 0.5, 0.0));
-			planeFrameGeometry.vertices.push(new THREE.Vector3(0.5, 0.5, 0.0));
-			planeFrameGeometry.vertices.push(new THREE.Vector3(0.5, -0.5, 0.0));
-			planeFrameGeometry.vertices.push(new THREE.Vector3(-0.5, 0.5, 0.0));
-			planeFrameGeometry.vertices.push(new THREE.Vector3(0.5, 0.5, 0.0));
-			planeFrameGeometry.vertices.push(new THREE.Vector3(-0.5, -0.5, 0.0));
-			planeFrameGeometry.vertices.push(new THREE.Vector3(0.5, -0.5, 0.0));
-		}
+			new THREE.Vector3(-0.5, -0.5, 0.0),
+			new THREE.Vector3(-0.5, 0.5, 0.0),
+			new THREE.Vector3(0.5, 0.5, 0.0),
+			new THREE.Vector3(0.5, -0.5, 0.0),
+			new THREE.Vector3(-0.5, 0.5, 0.0),
+			new THREE.Vector3(0.5, 0.5, 0.0),
+			new THREE.Vector3(-0.5, -0.5, 0.0),
+			new THREE.Vector3(0.5, -0.5, 0.0),
+		]);
 
 		this.dimension = new THREE.Vector3(1, 1, 1);
 		this.material = new THREE.MeshBasicMaterial( {
@@ -96,9 +92,10 @@ export class ClipVolume extends THREE.Object3D{
 				depthTest: false, 
 				depthWrite: false});
 				
-			let shaftGeometry = new THREE.Geometry();
-			shaftGeometry.vertices.push(new THREE.Vector3(0, 0, 0));
-			shaftGeometry.vertices.push(new THREE.Vector3(0, 1, 0));
+			let shaftGeometry = new THREE.BufferGeometry().setFromPoints([
+				new THREE.Vector3(0, 0, 0),
+				new THREE.Vector3(0, 1, 0),
+			]);
 			
 			let shaftMaterial = new THREE.LineBasicMaterial({
 				color: color, 
