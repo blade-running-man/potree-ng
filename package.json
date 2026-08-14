@@ -22,8 +22,9 @@
     "build:workers": "node scripts/build-esm-workers.mjs",
     "build:concat-workers": "node scripts/build-workers.mjs",
     "build:pages": "node scripts/generate-pages.mjs",
+    "build:three": "node scripts/copy-three.mjs",
     "typecheck": "tsc --noEmit",
-    "build:vite": "npm run build:lib && npm run build:workers && npm run build:concat-workers && npm run build:pages",
+    "build:vite": "npm run build:three && npm run build:lib && npm run build:workers && npm run build:concat-workers && npm run build:pages",
     "start": "npm run dev",
     "build": "npm run build:vite",
     "postinstall": "npm run build"

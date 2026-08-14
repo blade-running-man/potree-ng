@@ -4,6 +4,12 @@
 /360
 node_modules
 .DS_Store
+
+# three.js runtime + example-only add-ons are copied from the `three` npm
+# package at build time (scripts/copy-three.mjs); npm is the single source.
+libs/three.js/build/
+libs/three.js/lines/
+libs/three.js/loaders/
 /docs/
 examples/index.html
 .project
