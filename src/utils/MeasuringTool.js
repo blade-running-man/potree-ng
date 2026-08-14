@@ -1,9 +1,9 @@
 
 import * as THREE from "../../libs/three.js/build/three.module.js";
-import {Measure} from "./Measure.js";
-import {Utils} from "../utils.js";
-import {CameraMode} from "../defines.js";
-import { EventDispatcher } from "../EventDispatcher.js";
+import {Measure} from "./Measure";
+import {Utils} from "../utils";
+import {CameraMode} from "../defines";
+import { EventDispatcher } from "../EventDispatcher";
 
 function updateAzimuth(viewer, measure){
 

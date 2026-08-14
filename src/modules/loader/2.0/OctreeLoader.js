@@ -1,7 +1,7 @@
 
 import * as THREE from "../../../../libs/three.js/build/three.module.js";
-import {PointAttribute, PointAttributes, PointAttributeTypes} from "../../../loader/PointAttributes.js";
-import {OctreeGeometry, OctreeGeometryNode} from "./OctreeGeometry.js";
+import {PointAttribute, PointAttributes, PointAttributeTypes} from "../../../loader/PointAttributes";
+import {OctreeGeometry, OctreeGeometryNode} from "./OctreeGeometry";
 
 // let loadedNodes = new Set();
 

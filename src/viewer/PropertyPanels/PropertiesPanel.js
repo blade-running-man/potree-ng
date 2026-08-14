@@ -1,27 +1,27 @@
 
 import * as THREE from "../../../libs/three.js/build/three.module.js";
-import {Utils} from "../../utils.js";
-import {PointCloudTree} from "../../PointCloudTree.js";
-import {Annotation} from "../../Annotation.js";
-import {Measure} from "../../utils/Measure.js";
-import {Profile} from "../../utils/Profile.js";
-import {Volume, BoxVolume, SphereVolume} from "../../utils/Volume.js";
-import {CameraAnimation} from "../../modules/CameraAnimation/CameraAnimation.js";
-import {PointSizeType, PointShape, ElevationGradientRepeat} from "../../defines.js";
-import {Gradients} from "../../materials/Gradients.js";
+import {Utils} from "../../utils";
+import {PointCloudTree} from "../../PointCloudTree";
+import {Annotation} from "../../Annotation";
+import {Measure} from "../../utils/Measure";
+import {Profile} from "../../utils/Profile";
+import {Volume, BoxVolume, SphereVolume} from "../../utils/Volume";
+import {CameraAnimation} from "../../modules/CameraAnimation/CameraAnimation";
+import {PointSizeType, PointShape, ElevationGradientRepeat} from "../../defines";
+import {Gradients} from "../../materials/Gradients";
 
-import {MeasurePanel} from "./MeasurePanel.js";
-import {DistancePanel} from "./DistancePanel.js";
-import {PointPanel} from "./PointPanel.js";
-import {AreaPanel} from "./AreaPanel.js";
-import {AnglePanel} from "./AnglePanel.js";
-import {CirclePanel} from "./CirclePanel.js";
-import {HeightPanel} from "./HeightPanel.js";
-import {VolumePanel} from "./VolumePanel.js";
-import {ProfilePanel} from "./ProfilePanel.js";
-import {CameraPanel} from "./CameraPanel.js";
-import {AnnotationPanel} from "./AnnotationPanel.js";
-import { CameraAnimationPanel } from "./CameraAnimationPanel.js";
+import {MeasurePanel} from "./MeasurePanel";
+import {DistancePanel} from "./DistancePanel";
+import {PointPanel} from "./PointPanel";
+import {AreaPanel} from "./AreaPanel";
+import {AnglePanel} from "./AnglePanel";
+import {CirclePanel} from "./CirclePanel";
+import {HeightPanel} from "./HeightPanel";
+import {VolumePanel} from "./VolumePanel";
+import {ProfilePanel} from "./ProfilePanel";
+import {CameraPanel} from "./CameraPanel";
+import {AnnotationPanel} from "./AnnotationPanel";
+import { CameraAnimationPanel } from "./CameraAnimationPanel";
 
 export class PropertiesPanel{
 

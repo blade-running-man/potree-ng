@@ -22,8 +22,8 @@
  */
 
 import * as THREE from "../../libs/three.js/build/three.module.js";
-import {EventDispatcher} from "../EventDispatcher.js";
-import {KeyCodes} from "../KeyCodes.js";
+import {EventDispatcher} from "../EventDispatcher";
+import {KeyCodes} from "../KeyCodes";
 
 export class GeoControls extends EventDispatcher{
 

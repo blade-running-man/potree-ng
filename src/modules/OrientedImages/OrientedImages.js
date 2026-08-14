@@ -1,7 +1,7 @@
 
 import * as THREE from "../../../libs/three.js/build/three.module.js";
-import {OrientedImageControls} from "./OrientedImageControls.js";
-import { EventDispatcher } from "../../EventDispatcher.js";
+import {OrientedImageControls} from "./OrientedImageControls";
+import { EventDispatcher } from "../../EventDispatcher";
 
 // https://support.pix4d.com/hc/en-us/articles/205675256-How-are-yaw-pitch-roll-defined
 // https://support.pix4d.com/hc/en-us/articles/202558969-How-are-omega-phi-kappa-defined

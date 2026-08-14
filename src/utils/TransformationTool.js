@@ -1,6 +1,6 @@
 
 import * as THREE from "../../libs/three.js/build/three.module.js";
-import {Utils} from "../utils.js";
+import {Utils} from "../utils";
 
 export class TransformationTool {
 	constructor(viewer) {

@@ -1,11 +1,11 @@
 
 import * as THREE from "../../libs/three.js/build/three.module.js";
-import {NormalizationMaterial} from "../materials/NormalizationMaterial.js";
-import {NormalizationEDLMaterial} from "../materials/NormalizationEDLMaterial.js";
-import {PointCloudMaterial} from "../materials/PointCloudMaterial.js";
-import {PointShape} from "../defines.js";
-import {SphereVolume} from "../utils/Volume.js";
-import {Utils} from "../utils.js";
+import {NormalizationMaterial} from "../materials/NormalizationMaterial";
+import {NormalizationEDLMaterial} from "../materials/NormalizationEDLMaterial";
+import {PointCloudMaterial} from "../materials/PointCloudMaterial";
+import {PointShape} from "../defines";
+import {SphereVolume} from "../utils/Volume";
+import {Utils} from "../utils";
 
 
 export class HQSplatRenderer{

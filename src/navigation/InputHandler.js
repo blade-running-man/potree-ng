@@ -5,9 +5,9 @@
  */
 
 import * as THREE from "../../libs/three.js/build/three.module.js";
-import {KeyCodes} from "../KeyCodes.js";
-import {Utils} from "../utils.js";
-import {EventDispatcher} from "../EventDispatcher.js";
+import {KeyCodes} from "../KeyCodes";
+import {Utils} from "../utils";
+import {EventDispatcher} from "../EventDispatcher";
 
 export class InputHandler extends EventDispatcher {
 	constructor (viewer) {

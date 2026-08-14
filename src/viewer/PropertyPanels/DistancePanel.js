@@ -1,7 +1,7 @@
 
 
-import {MeasurePanel} from "./MeasurePanel.js";
-import {Profile} from "./../../utils/Profile.js";
+import {MeasurePanel} from "./MeasurePanel";
+import {Profile} from "./../../utils/Profile";
 
 export class DistancePanel extends MeasurePanel{
 	constructor(viewer, measurement, propertiesPanel){

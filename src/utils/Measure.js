@@ -1,7 +1,7 @@
 
 import * as THREE from "../../libs/three.js/build/three.module.js";
-import {TextSprite} from "../TextSprite.js";
-import {Utils} from "../utils.js";
+import {TextSprite} from "../TextSprite";
+import {Utils} from "../utils";
 import {Line2} from "../../libs/three.js/lines/Line2.js";
 import {LineGeometry} from "../../libs/three.js/lines/LineGeometry.js";
 import {LineMaterial} from "../../libs/three.js/lines/LineMaterial.js";

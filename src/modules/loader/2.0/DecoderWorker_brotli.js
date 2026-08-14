@@ -1,7 +1,7 @@
 
 
-// import {Version} from "../../Version.js";
-import {PointAttributes, PointAttribute, PointAttributeTypes} from "../../../loader/PointAttributes.js";
+// import {Version} from "../../Version";
+import {PointAttributes, PointAttribute, PointAttributeTypes} from "../../../loader/PointAttributes";
 import {BrotliDecode} from "../../../../libs/brotli/decode.js";
 
 const typedArrayMapping = {

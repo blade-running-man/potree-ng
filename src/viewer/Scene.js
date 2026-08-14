@@ -1,10 +1,10 @@
 
 import * as THREE from "../../libs/three.js/build/three.module.js";
-import {Annotation} from "../Annotation.js";
-import {CameraMode} from "../defines.js";
-import {View} from "./View.js";
-import {Utils} from "../utils.js";
-import {EventDispatcher} from "../EventDispatcher.js";
+import {Annotation} from "../Annotation";
+import {CameraMode} from "../defines";
+import {View} from "./View";
+import {Utils} from "../utils";
+import {EventDispatcher} from "../EventDispatcher";
 
 
 export class Scene extends EventDispatcher{

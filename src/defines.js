@@ -1,5 +1,5 @@
 
-import {Enum} from "./Enum.js";
+import {Enum} from "./Enum";
 
 
 export const CameraMode = {

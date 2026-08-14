@@ -1,12 +1,12 @@
 
 import * as THREE from "../../libs/three.js/build/three.module.js";
-import {PointCloudOctreeGeometry, PointCloudOctreeGeometryNode} from "../PointCloudOctreeGeometry.js";
-import {Version} from "../Version.js";
-import {XHRFactory} from "../XHRFactory.js";
-import {LasLazLoader} from "./LasLazLoader.js";
-import {BinaryLoader} from "./BinaryLoader.js";
-import {Utils} from "../utils.js";
-import {PointAttribute, PointAttributes, PointAttributeTypes} from "./PointAttributes.js";
+import {PointCloudOctreeGeometry, PointCloudOctreeGeometryNode} from "../PointCloudOctreeGeometry";
+import {Version} from "../Version";
+import {XHRFactory} from "../XHRFactory";
+import {LasLazLoader} from "./LasLazLoader";
+import {BinaryLoader} from "./BinaryLoader";
+import {Utils} from "../utils";
+import {PointAttribute, PointAttributes, PointAttributeTypes} from "./PointAttributes";
 
 function parseAttributes(cloudjs){
 

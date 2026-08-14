@@ -1,6 +1,6 @@
 
 import * as THREE from "../../libs/three.js/build/three.module.js";
-import {EventDispatcher} from "../EventDispatcher.js";
+import {EventDispatcher} from "../EventDispatcher";
 
 Potree.PointCloudArena4DGeometryNode = class PointCloudArena4DGeometryNode{
 

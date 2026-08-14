@@ -7,7 +7,7 @@
  */
 
 import * as THREE from "../../libs/three.js/build/three.module.js";
-import {Measure} from "../utils/Measure.js";
+import {Measure} from "../utils/Measure";
 
 export class DXFExporter {
 
