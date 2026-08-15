@@ -88,7 +88,7 @@ export class LasLazLoader {
 				data.count,
 				header.scale,
 				header.offset,
-				header.mins, header.maxs));
+				header.mins, header.maxs), header.pointsFormatId);
 
 			totalRead += data.count;
 			LasLazLoader.progressCB(totalRead / totalToRead);
@@ -124,24 +124,36 @@ export class LasLazBatcher{
 		this.node = node;
 	}
 
-	push (lasBuffer) {
+	async push (lasBuffer, pointFormatID) {
 		const workerPath = Potree.scriptPath + '/workers/LASDecoderWorker.js';
-		const worker = Potree.workerPool.getWorker(workerPath);
 		const node = this.node;
 		const pointAttributes = node.pcoGeometry.pointAttributes;
 
-		worker.onmessage = (e) => {
+		let message = {
+			buffer: lasBuffer.arrayb,
+			numPoints: lasBuffer.pointsCount,
+			pointSize: lasBuffer.pointSize,
+			pointFormatID: pointFormatID,
+			scale: lasBuffer.scale,
+			offset: lasBuffer.offset,
+			mins: lasBuffer.mins,
+			maxs: lasBuffer.maxs
+		};
+
+		try {
+			let data = await Potree.workerPool.runWorker(workerPath, message, [message.buffer]);
+
 			let geometry = new THREE.BufferGeometry();
 			let numPoints = lasBuffer.pointsCount;
 
-			let positions = new Float32Array(e.data.position);
-			let colors = new Uint8Array(e.data.color);
-			let intensities = new Float32Array(e.data.intensity);
-			let classifications = new Uint8Array(e.data.classification);
-			let returnNumbers = new Uint8Array(e.data.returnNumber);
-			let numberOfReturns = new Uint8Array(e.data.numberOfReturns);
-			let pointSourceIDs = new Uint16Array(e.data.pointSourceID);
-			let indices = new Uint8Array(e.data.indices);
+			let positions = new Float32Array(data.position);
+			let colors = new Uint8Array(data.color);
+			let intensities = new Float32Array(data.intensity);
+			let classifications = new Uint8Array(data.classification);
+			let returnNumbers = new Uint8Array(data.returnNumber);
+			let numberOfReturns = new Uint8Array(data.numberOfReturns);
+			let pointSourceIDs = new Uint16Array(data.pointSourceID);
+			let indices = new Uint8Array(data.indices);
 
 			geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
 			geometry.setAttribute('color', new THREE.BufferAttribute(colors, 4, true));
@@ -153,42 +165,30 @@ export class LasLazBatcher{
 			geometry.setAttribute('indices', new THREE.BufferAttribute(indices, 4));
 			geometry.attributes.indices.normalized = true;
 
-			for(const key in e.data.ranges){
-				const range = e.data.ranges[key];
-
+			for(const key in data.ranges){
+				const range = data.ranges[key];
 				const attribute = pointAttributes.attributes.find(a => a.name === key);
 				attribute.range[0] = Math.min(attribute.range[0], range[0]);
 				attribute.range[1] = Math.max(attribute.range[1], range[1]);
 			}
 
 			let tightBoundingBox = new THREE.Box3(
-				new THREE.Vector3().fromArray(e.data.tightBoundingBox.min),
-				new THREE.Vector3().fromArray(e.data.tightBoundingBox.max)
+				new THREE.Vector3().fromArray(data.tightBoundingBox.min),
+				new THREE.Vector3().fromArray(data.tightBoundingBox.max)
 			);
 
 			geometry.boundingBox = this.node.boundingBox;
 			this.node.tightBoundingBox = tightBoundingBox;
-
 			this.node.geometry = geometry;
 			this.node.numPoints = numPoints;
 			this.node.loaded = true;
 			this.node.loading = false;
+			this.node.mean = new THREE.Vector3(...data.mean);
+		} catch (err) {
+			console.error(`LASDecoderWorker failed for node ${this.node.name}:`, err);
+			this.node.loading = false;
+		} finally {
 			Potree.numNodesLoading--;
-			this.node.mean = new THREE.Vector3(...e.data.mean);
-
-			Potree.workerPool.returnWorker(workerPath, worker);
-		};
-
-		let message = {
-			buffer: lasBuffer.arrayb,
-			numPoints: lasBuffer.pointsCount,
-			pointSize: lasBuffer.pointSize,
-			pointFormatID: 2,
-			scale: lasBuffer.scale,
-			offset: lasBuffer.offset,
-			mins: lasBuffer.mins,
-			maxs: lasBuffer.maxs
-		};
-		worker.postMessage(message, [message.buffer]);
+		}
 	};
 }

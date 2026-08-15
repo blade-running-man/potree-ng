@@ -52,7 +52,7 @@ export class BinaryLoader{
 		}
 	};
 
-	parse(node, buffer){
+	async parse(node, buffer){
 		let pointAttributes = node.pcoGeometry.pointAttributes;
 		let numPoints = buffer.byteLength / node.pcoGeometry.pointAttributes.byteSize;
 
@@ -61,18 +61,23 @@ export class BinaryLoader{
 		}
 
 		let workerPath = Potree.scriptPath + '/workers/BinaryDecoderWorker.js';
-		let worker = Potree.workerPool.getWorker(workerPath);
 
-		worker.onmessage = function (e) {
+		let message = {
+			buffer: buffer,
+			pointAttributes: pointAttributes,
+			version: this.version.version,
+			offset: [node.pcoGeometry.offset.x, node.pcoGeometry.offset.y, node.pcoGeometry.offset.z],
+			scale: this.scale,
+		};
 
-			let data = e.data;
+		try {
+			let data = await Potree.workerPool.runWorker(workerPath, message, [message.buffer]);
+
 			let buffers = data.attributeBuffers;
 			let tightBoundingBox = new THREE.Box3(
 				new THREE.Vector3().fromArray(data.tightBoundingBox.min),
 				new THREE.Vector3().fromArray(data.tightBoundingBox.max)
 			);
-
-			Potree.workerPool.returnWorker(workerPath, worker);
 
 			let geometry = new THREE.BufferGeometry();
 
@@ -94,9 +99,6 @@ export class BinaryLoader{
 					let bufferAttribute = new THREE.BufferAttribute(new Uint8Array(buffer), 4);
 					bufferAttribute.normalized = true;
 					geometry.setAttribute('indices', bufferAttribute);
-				} else if (property === "SPACING") {
-					let bufferAttribute = new THREE.BufferAttribute(new Float32Array(buffer), 1);
-					geometry.setAttribute('spacing', bufferAttribute);
 				} else {
 					const bufferAttribute = new THREE.BufferAttribute(new Float32Array(buffer), 1);
 
@@ -116,37 +118,26 @@ export class BinaryLoader{
 					if(node.getLevel() === 0){
 						attribute.initialRange = batchAttribute.range;
 					}
-
 				}
 			}
 
 			tightBoundingBox.max.sub(tightBoundingBox.min);
 			tightBoundingBox.min.set(0, 0, 0);
 
-			let numPoints = e.data.buffer.byteLength / pointAttributes.byteSize;
-			
-			node.numPoints = numPoints;
+			let decodedPoints = data.buffer.byteLength / pointAttributes.byteSize;
+
+			node.numPoints = decodedPoints;
 			node.geometry = geometry;
 			node.mean = new THREE.Vector3(...data.mean);
 			node.tightBoundingBox = tightBoundingBox;
 			node.loaded = true;
 			node.loading = false;
-			node.estimatedSpacing = data.estimatedSpacing;
+		} catch (err) {
+			console.error(`BinaryDecoderWorker failed for node ${node.name}:`, err);
+			node.loading = false;
+		} finally {
 			Potree.numNodesLoading--;
-		};
-
-		let message = {
-			buffer: buffer,
-			pointAttributes: pointAttributes,
-			version: this.version.version,
-			min: [ node.boundingBox.min.x, node.boundingBox.min.y, node.boundingBox.min.z ],
-			offset: [node.pcoGeometry.offset.x, node.pcoGeometry.offset.y, node.pcoGeometry.offset.z],
-			scale: this.scale,
-			spacing: node.spacing,
-			hasChildren: node.hasChildren,
-			name: node.name
-		};
-		worker.postMessage(message, [message.buffer]);
+		}
 	};
 
 	
