@@ -99,7 +99,6 @@ export class EptBinaryLoader {
 		} catch (err) {
 			console.error(`EptBinaryDecoderWorker failed for node ${node.name}:`, err);
 			node.loading = false;
-		} finally {
 			Potree.numNodesLoading--;
 		}
 	}

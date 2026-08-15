@@ -140,7 +140,6 @@ export class EptLazBatcher {
 		} catch (err) {
 			console.error(`EptLaszipDecoderWorker failed for node ${this.node.name}:`, err);
 			this.node.loading = false;
-		} finally {
 			Potree.numNodesLoading--;
 		}
 	};
