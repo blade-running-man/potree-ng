@@ -1,9 +1,7 @@
+import { Version } from "../../Version";
+import { PointAttribute, PointAttributeTypes } from "../../loader/PointAttributes";
 
-
-import {Version} from "../Version";
-import {PointAttributes, PointAttribute, PointAttributeTypes} from "../loader/PointAttributes";
-
-const typedArrayMapping = {
+const typedArrayMapping: Record<string, any> = {
 	"int8":   Int8Array,
 	"int16":  Int16Array,
 	"int32":  Int32Array,
@@ -16,36 +14,49 @@ const typedArrayMapping = {
 	"double": Float64Array,
 };
 
-Potree = {};
+export interface DecodeBinaryInput {
+	buffer: ArrayBuffer;
+	pointAttributes: any; // loose Potree schema shape; targeted any is OK per the utils convention
+	version: string;
+	offset: number[]; // node offset
+	scale: number;
+}
 
-onmessage = function (event) {
+export interface DecodeBinaryResult {
+	attributeBuffers: Record<string, any>;
+	mean: number[];
+	tightBoundingBox: { min: number[]; max: number[] };
+}
 
-	performance.mark("binary-decoder-start");
-	
-	let buffer = event.data.buffer;
-	let pointAttributes = event.data.pointAttributes;
-	let numPoints = buffer.byteLength / pointAttributes.byteSize;
-	let view = new DataView(buffer);
-	let version = new Version(event.data.version);
-	let nodeOffset = event.data.offset;
-	let scale = event.data.scale;
-	let spacing = event.data.spacing;
-	let hasChildren = event.data.hasChildren;
-	let name = event.data.name;
-	
-	let tightBoxMin = [ Number.POSITIVE_INFINITY, Number.POSITIVE_INFINITY, Number.POSITIVE_INFINITY ];
-	let tightBoxMax = [ Number.NEGATIVE_INFINITY, Number.NEGATIVE_INFINITY, Number.NEGATIVE_INFINITY ];
-	let mean = [0, 0, 0];
-	
+/**
+ * Pure decode of a Potree 1.x binary point buffer into per-attribute
+ * `ArrayBuffer`s, computing the point `mean` and `tightBoundingBox`.
+ *
+ * Extracted verbatim from the old `BinaryDecoderWorker` `onmessage` body so it
+ * can be unit-tested without a Worker context. Returns the decoded buffers
+ * instead of `postMessage`-ing them.
+ */
+export function decodeBinaryAttributes(input: DecodeBinaryInput): DecodeBinaryResult {
+	const buffer = input.buffer;
+	const pointAttributes = input.pointAttributes;
+	const numPoints = buffer.byteLength / pointAttributes.byteSize;
+	const view = new DataView(buffer);
+	const version = new Version(input.version);
+	const nodeOffset = input.offset;
+	const scale = input.scale;
 
-	let attributeBuffers = {};
+	const tightBoxMin = [Number.POSITIVE_INFINITY, Number.POSITIVE_INFINITY, Number.POSITIVE_INFINITY];
+	const tightBoxMax = [Number.NEGATIVE_INFINITY, Number.NEGATIVE_INFINITY, Number.NEGATIVE_INFINITY];
+	const mean = [0, 0, 0];
+
+	const attributeBuffers: Record<string, any> = {};
 	let inOffset = 0;
-	for (let pointAttribute of pointAttributes.attributes) {
-		
+	for (const pointAttribute of pointAttributes.attributes) {
+
 		if (pointAttribute.name === "POSITION_CARTESIAN") {
-			let buff = new ArrayBuffer(numPoints * 4 * 3);
-			let positions = new Float32Array(buff);
-		
+			const buff = new ArrayBuffer(numPoints * 4 * 3);
+			const positions = new Float32Array(buff);
+
 			for (let j = 0; j < numPoints; j++) {
 				let x, y, z;
 
@@ -78,8 +89,8 @@ onmessage = function (event) {
 
 			attributeBuffers[pointAttribute.name] = { buffer: buff, attribute: pointAttribute };
 		} else if (pointAttribute.name === "rgba") {
-			let buff = new ArrayBuffer(numPoints * 4);
-			let colors = new Uint8Array(buff);
+			const buff = new ArrayBuffer(numPoints * 4);
+			const colors = new Uint8Array(buff);
 
 			for (let j = 0; j < numPoints; j++) {
 				colors[4 * j + 0] = view.getUint8(inOffset + j * pointAttributes.byteSize + 0);
@@ -89,22 +100,22 @@ onmessage = function (event) {
 
 			attributeBuffers[pointAttribute.name] = { buffer: buff, attribute: pointAttribute };
 		} else if (pointAttribute.name === "NORMAL_SPHEREMAPPED") {
-			let buff = new ArrayBuffer(numPoints * 4 * 3);
-			let normals = new Float32Array(buff);
+			const buff = new ArrayBuffer(numPoints * 4 * 3);
+			const normals = new Float32Array(buff);
 
 			for (let j = 0; j < numPoints; j++) {
-				let bx = view.getUint8(inOffset + j * pointAttributes.byteSize + 0);
-				let by = view.getUint8(inOffset + j * pointAttributes.byteSize + 1);
+				const bx = view.getUint8(inOffset + j * pointAttributes.byteSize + 0);
+				const by = view.getUint8(inOffset + j * pointAttributes.byteSize + 1);
 
-				let ex = bx / 255;
-				let ey = by / 255;
+				const ex = bx / 255;
+				const ey = by / 255;
 
 				let nx = ex * 2 - 1;
 				let ny = ey * 2 - 1;
 				let nz = 1;
-				let nw = -1;
+				const nw = -1;
 
-				let l = (nx * (-nx)) + (ny * (-ny)) + (nz * (-nw));
+				const l = (nx * (-nx)) + (ny * (-ny)) + (nz * (-nw));
 				nz = l;
 				nx = nx * Math.sqrt(l);
 				ny = ny * Math.sqrt(l);
@@ -120,21 +131,22 @@ onmessage = function (event) {
 
 			attributeBuffers[pointAttribute.name] = { buffer: buff, attribute: pointAttribute };
 		} else if (pointAttribute.name === "NORMAL_OCT16") {
-			let buff = new ArrayBuffer(numPoints * 4 * 3);
-			let normals = new Float32Array(buff);
+			const buff = new ArrayBuffer(numPoints * 4 * 3);
+			const normals = new Float32Array(buff);
 
 			for (let j = 0; j < numPoints; j++) {
-				let bx = view.getUint8(inOffset + j * pointAttributes.byteSize + 0);
-				let by = view.getUint8(inOffset + j * pointAttributes.byteSize + 1);
+				const bx = view.getUint8(inOffset + j * pointAttributes.byteSize + 0);
+				const by = view.getUint8(inOffset + j * pointAttributes.byteSize + 1);
 
-				let u = (bx / 255) * 2 - 1;
-				let v = (by / 255) * 2 - 1;
+				const u = (bx / 255) * 2 - 1;
+				const v = (by / 255) * 2 - 1;
 
-				let z = 1 - Math.abs(u) - Math.abs(v);
+				const z0 = 1 - Math.abs(u) - Math.abs(v);
 
 				let x = 0;
 				let y = 0;
-				if (z >= 0) {
+				let z = z0;
+				if (z0 >= 0) {
 					x = u;
 					y = v;
 				} else {
@@ -142,11 +154,11 @@ onmessage = function (event) {
 					y = -(u / Math.sign(u) - 1) / Math.sign(v);
 				}
 
-				let length = Math.sqrt(x * x + y * y + z * z);
+				const length = Math.sqrt(x * x + y * y + z * z);
 				x = x / length;
 				y = y / length;
 				z = z / length;
-				
+
 				normals[3 * j + 0] = x;
 				normals[3 * j + 1] = y;
 				normals[3 * j + 2] = z;
@@ -154,14 +166,14 @@ onmessage = function (event) {
 
 			attributeBuffers[pointAttribute.name] = { buffer: buff, attribute: pointAttribute };
 		} else if (pointAttribute.name === "NORMAL") {
-			let buff = new ArrayBuffer(numPoints * 4 * 3);
-			let normals = new Float32Array(buff);
+			const buff = new ArrayBuffer(numPoints * 4 * 3);
+			const normals = new Float32Array(buff);
 
 			for (let j = 0; j < numPoints; j++) {
-				let x = view.getFloat32(inOffset + j * pointAttributes.byteSize + 0, true);
-				let y = view.getFloat32(inOffset + j * pointAttributes.byteSize + 4, true);
-				let z = view.getFloat32(inOffset + j * pointAttributes.byteSize + 8, true);
-				
+				const x = view.getFloat32(inOffset + j * pointAttributes.byteSize + 0, true);
+				const y = view.getFloat32(inOffset + j * pointAttributes.byteSize + 4, true);
+				const z = view.getFloat32(inOffset + j * pointAttributes.byteSize + 8, true);
+
 				normals[3 * j + 0] = x;
 				normals[3 * j + 1] = y;
 				normals[3 * j + 2] = z;
@@ -169,57 +181,53 @@ onmessage = function (event) {
 
 			attributeBuffers[pointAttribute.name] = { buffer: buff, attribute: pointAttribute };
 		} else {
-			let buff = new ArrayBuffer(numPoints * 4);
-			let f32 = new Float32Array(buff);
+			const buff = new ArrayBuffer(numPoints * 4);
+			const f32 = new Float32Array(buff);
 
-			let TypedArray = typedArrayMapping[pointAttribute.type.name];
-			preciseBuffer = new TypedArray(numPoints);
+			const TypedArray = typedArrayMapping[pointAttribute.type.name];
+			const preciseBuffer = new TypedArray(numPoints);
 
 			let [min, max] = [Infinity, -Infinity];
 			let [offset, scale] = [0, 1];
 
-			const getterMap = {
+			const getterMap: Record<string, any> = {
 				"int8":   view.getInt8,
 				"int16":  view.getInt16,
 				"int32":  view.getInt32,
-				"int64":  view.getInt64,
+				"int64":  (view as any).getInt64,
 				"uint8":  view.getUint8,
 				"uint16": view.getUint16,
 				"uint32": view.getUint32,
-				"uint64": view.getUint64,
+				"uint64": (view as any).getUint64,
 				"float":  view.getFloat32,
 				"double": view.getFloat64,
 			};
 			const getter = getterMap[pointAttribute.type.name].bind(view);
 
 			// compute offset and scale to pack larger types into 32 bit floats
-			if(pointAttribute.type.size > 4){
-				for(let j = 0; j < numPoints; j++){
-					let value = getter(inOffset + j * pointAttributes.byteSize, true);
+			if (pointAttribute.type.size > 4) {
+				for (let j = 0; j < numPoints; j++) {
+					const value = getter(inOffset + j * pointAttributes.byteSize, true);
 
-					if(!Number.isNaN(value)){
+					if (!Number.isNaN(value)) {
 						min = Math.min(min, value);
 						max = Math.max(max, value);
 					}
 				}
 
-				
-
-				if(pointAttribute.initialRange != null){
+				if (pointAttribute.initialRange != null) {
 					offset = pointAttribute.initialRange[0];
 					scale = 1 / (pointAttribute.initialRange[1] - pointAttribute.initialRange[0]);
-				}else{
+				} else {
 					offset = min;
 					scale = 1 / (max - min);
 				}
 			}
 
-			
+			for (let j = 0; j < numPoints; j++) {
+				const value = getter(inOffset + j * pointAttributes.byteSize, true);
 
-			for(let j = 0; j < numPoints; j++){
-				let value = getter(inOffset + j * pointAttributes.byteSize, true);
-
-				if(!Number.isNaN(value)){
+				if (!Number.isNaN(value)) {
 					min = Math.min(min, value);
 					max = Math.max(max, value);
 				}
@@ -230,7 +238,7 @@ onmessage = function (event) {
 
 			pointAttribute.range = [min, max];
 
-			attributeBuffers[pointAttribute.name] = { 
+			attributeBuffers[pointAttribute.name] = {
 				buffer: buff,
 				preciseBuffer: preciseBuffer,
 				attribute: pointAttribute,
@@ -243,36 +251,36 @@ onmessage = function (event) {
 	}
 
 	{ // add indices
-		let buff = new ArrayBuffer(numPoints * 4);
-		let indices = new Uint32Array(buff);
+		const buff = new ArrayBuffer(numPoints * 4);
+		const indices = new Uint32Array(buff);
 
 		for (let i = 0; i < numPoints; i++) {
 			indices[i] = i;
 		}
-		
+
 		attributeBuffers["INDICES"] = { buffer: buff, attribute: PointAttribute.INDICES };
 	}
 
 	{ // handle attribute vectors
-		let vectors = pointAttributes.vectors;
+		const vectors = pointAttributes.vectors;
 
-		for(let vector of vectors){
+		for (const vector of vectors) {
 
-			let {name, attributes} = vector;
-			let numVectorElements = attributes.length;
-			let buffer = new ArrayBuffer(numVectorElements * numPoints * 4);
-			let f32 = new Float32Array(buffer);
+			const { name, attributes } = vector;
+			const numVectorElements = attributes.length;
+			const vecBuffer = new ArrayBuffer(numVectorElements * numPoints * 4);
+			const f32 = new Float32Array(vecBuffer);
 
 			let iElement = 0;
-			for(let sourceName of attributes){
-				let sourceBuffer = attributeBuffers[sourceName];
-				let {offset, scale} = sourceBuffer;
-				let view = new DataView(sourceBuffer.buffer);
+			for (const sourceName of attributes) {
+				const sourceBuffer = attributeBuffers[sourceName];
+				const { offset, scale } = sourceBuffer;
+				const sourceView = new DataView(sourceBuffer.buffer);
 
-				const getter = view.getFloat32.bind(view);
+				const getter = sourceView.getFloat32.bind(sourceView);
 
-				for(let j = 0; j < numPoints; j++){
-					let value = getter(j * 4, true);
+				for (let j = 0; j < numPoints; j++) {
+					const value = getter(j * 4, true);
 
 					f32[j * numVectorElements + iElement] = (value / scale) + offset;
 				}
@@ -280,10 +288,10 @@ onmessage = function (event) {
 				iElement++;
 			}
 
-			let vecAttribute = new PointAttribute(name, PointAttributeTypes.DATA_TYPE_FLOAT, 3);
+			const vecAttribute = new PointAttribute(name, PointAttributeTypes.DATA_TYPE_FLOAT, 3);
 
-			attributeBuffers[name] = { 
-				buffer: buffer, 
+			attributeBuffers[name] = {
+				buffer: vecBuffer,
 				attribute: vecAttribute,
 			};
 
@@ -291,33 +299,9 @@ onmessage = function (event) {
 
 	}
 
-	performance.mark("binary-decoder-end");
-
-	// { // print timings
-	// 	//performance.measure("spacing", "spacing-start", "spacing-end");
-	// 	performance.measure("binary-decoder", "binary-decoder-start", "binary-decoder-end");
-	// 	let measure = performance.getEntriesByType("measure")[0];
-	// 	let dpp = 1000 * measure.duration / numPoints;
-	// 	let pps = parseInt(numPoints / (measure.duration / 1000));
-	// 	let debugMessage = `${measure.duration.toFixed(3)} ms, ${numPoints} points, ${pps.toLocaleString()} points/sec`;
-	// 	console.log(debugMessage);
-	// }
-
-	performance.clearMarks();
-	performance.clearMeasures();
-
-	let message = {
-		buffer: buffer,
-		mean: mean,
-		attributeBuffers: attributeBuffers,
+	return {
+		attributeBuffers,
+		mean,
 		tightBoundingBox: { min: tightBoxMin, max: tightBoxMax },
 	};
-
-	let transferables = [];
-	for (let property in message.attributeBuffers) {
-		transferables.push(message.attributeBuffers[property].buffer);
-	}
-	transferables.push(buffer);
-
-	postMessage(message, transferables);
-};
+}
