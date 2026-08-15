@@ -104,6 +104,41 @@ describe("decodeBinaryAttributes — R9: 64-bit getters", () => {
 		expect(attr.range).toEqual([42, 100]);
 	});
 
+	it("reads the FULL 64 bits: a value > 2^32 survives (getUint32 would truncate)", () => {
+		// Both values exceed 2^32. A 32-bit little-endian read would keep only the
+		// low dword: 0x1_0000_002A -> 42 and 0x2_0000_0000 -> 0, diverging from the
+		// true 64-bit magnitudes. This is the mutation guard for getBigUint64.
+		const LOW = 0x1_0000_002An; // 4294967338
+		const HIGH = 0x2_0000_0000n; // 8589934592
+		const attr = new PointAttribute("big64", PointAttributeTypes.DATA_TYPE_UINT64, 1);
+		const pa = new PointAttributes();
+		pa.add(attr);
+
+		const buffer = new ArrayBuffer(2 * pa.byteSize);
+		const view = new DataView(buffer);
+		view.setBigUint64(0, LOW, true);
+		view.setBigUint64(8, HIGH, true);
+
+		const result = decodeBinaryAttributes({
+			buffer,
+			pointAttributes: pa,
+			version: "1.4",
+			offset: [0, 0, 0],
+			scale: 1,
+		});
+
+		const decoded = result.attributeBuffers["big64"];
+		// preciseBuffer keeps the un-packed 64-bit magnitudes (exact in f64).
+		expect(decoded.preciseBuffer[0]).toBe(4294967338);
+		expect(decoded.preciseBuffer[1]).toBe(8589934592);
+		// offset = min, and the derived f32 packing spans [0, 1].
+		expect(decoded.offset).toBe(4294967338);
+		expect(attr.range).toEqual([4294967338, 8589934592]);
+		const f32 = new Float32Array(decoded.buffer);
+		expect(f32[0]).toBeCloseTo(0, 6);
+		expect(f32[1]).toBeCloseTo(1, 6);
+	});
+
 	it("decodes an int64 attribute via getBigInt64 (negative values)", () => {
 		const attr = new PointAttribute("signed64", PointAttributeTypes.DATA_TYPE_INT64, 1);
 		const pa = new PointAttributes();
