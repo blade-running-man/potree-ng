@@ -1,11 +1,13 @@
 import fs from 'node:fs';
 import path from 'node:path';
-// Vite 8 ships rolldown (oxc), not esbuild. `transform` from rolldown's
-// experimental entry is oxc's TS transform: it strips types WITHOUT bundling or
-// resolving imports, which is exactly what the concat pipeline needs — the
-// worker `.ts` sources rely on globals from the libs prepended before them and
-// MUST stay import/export-free.
-import { transform } from 'rolldown/experimental';
+// `typescript` is already a direct devDependency (it powers `npm run typecheck`),
+// so `transpileModule` is a stable, dependency-free way to strip types for the
+// concat pipeline. `module: ESNext` is deliberate — `commonjs` would inject a
+// `"use strict"` + `exports`/`__esModule` wrapper, whereas ESNext leaves the
+// import/export-free worker sources as plain script text (these `.ts` workers
+// rely on globals from the libs prepended before them and MUST stay
+// import/export-free).
+import ts from 'typescript';
 
 const workers = {
   // LAZ worker is built from the vendored plasio sources, NOT from src/workers.
@@ -21,23 +23,26 @@ const workers = {
   ],
 };
 
-// Read a source file for concatenation. `.ts` files are transpiled through oxc
-// (types stripped, no bundling) so the emitted text is plain script with no
-// import/export; `.js` libs are passed through verbatim.
-async function readSource(file) {
+// Read a source file for concatenation. `.ts` files have their types stripped
+// via typescript's `transpileModule` (no bundling, no import resolution) so the
+// emitted text is plain script with no import/export; `.js` libs pass through
+// verbatim.
+function readSource(file) {
   const src = fs.readFileSync(file, 'utf8');
-  if (file.endsWith('.ts')) {
-    const { code } = await transform(file, src, { lang: 'ts' });
-    return code;
-  }
-  return src;
+  if (!file.endsWith('.ts')) return src;
+  return ts.transpileModule(src, {
+    compilerOptions: {
+      target: ts.ScriptTarget.ES2020,
+      module: ts.ModuleKind.ESNext,
+      isolatedModules: true,
+    },
+  }).outputText;
 }
 
 const outDir = 'build/potree/workers';
 fs.mkdirSync(outDir, { recursive: true });
 for (const [name, files] of Object.entries(workers)) {
-  const parts = await Promise.all(files.map(readSource));
-  const merged = parts.join('\n');
+  const merged = files.map(readSource).join('\n');
   fs.writeFileSync(path.join(outDir, `${name}.js`), merged);
 }
 // wasm next to the workers
