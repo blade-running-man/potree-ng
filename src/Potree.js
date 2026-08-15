@@ -84,6 +84,8 @@ import {OctreeLoader} from "./modules/loader/2.0/OctreeLoader";
 import {POCLoader} from "./loader/POCLoader";
 import {CopcLoader, EptLoader} from "./loader/EptLoader";
 import {PointCloudOctree} from "./PointCloudOctree";
+import {PointCloudArena4D} from "./arena4d/PointCloudArena4D";
+import {PointCloudArena4DGeometry} from "./arena4d/PointCloudArena4DGeometry";
 import {WorkerPool} from "./WorkerPool";
 
 export const workerPool = new WorkerPool();
