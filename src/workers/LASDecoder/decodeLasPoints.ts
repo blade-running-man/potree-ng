@@ -40,6 +40,12 @@ export interface LasLayout {
 /**
  * Per-format LAS point-record layout descriptor. Offsets follow the ASPRS LAS
  * spec: legacy point formats 0-5 vs. the LAS 1.4 formats 6-10.
+ *
+ * Note: formats 5 and 10 also carry RGB (5 alongside waveform data, 10 with
+ * waveform + NIR), but they are intentionally out of scope here — only 2/3/7/8
+ * are wired for color (see the `it.todo`s in the decodeLasPoints tests). Their
+ * `color` offset is left `undefined` so those points decode without RGB rather
+ * than reading it from the wrong byte offset.
  */
 export function lasLayoutFor(format: number): LasLayout {
 	if (format <= 5) {

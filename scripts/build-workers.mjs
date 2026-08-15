@@ -13,7 +13,8 @@ const workers = {
   // LAZ worker is built from the vendored plasio sources, NOT from src/workers.
   // (src/workers/LASLAZWorker.js / LazLoaderWorker.js were dead stubs — removed.)
   LASLAZWorker: ['libs/plasio/workers/laz-perf.js', 'libs/plasio/workers/laz-loader-worker.js'],
-  EptLaszipDecoderWorker: ['libs/copc/index.js', 'src/workers/EptLaszipDecoderWorker.ts'],
+  // EptLaszipDecoderWorker moved to the ESM pipeline (scripts/build-esm-workers.mjs);
+  // it prepends libs/copc/index.js there. The laz-perf.wasm copy below still runs.
   EptBinaryDecoderWorker: ['libs/ept/ParseBuffer.js', 'src/workers/EptBinaryDecoderWorker.ts'],
   EptZstandardDecoderWorker: [
     'src/workers/EptZstandardDecoder_preamble.ts',

@@ -1,41 +1,45 @@
-// ept-laszip-decoder-worker.js
+// Pure per-point assembly for the EptLaszip decoder, extracted verbatim from the
+// old `EptLaszipDecoderWorker` body so it can be unit-tested without a Worker (or
+// the `Copc` global). Everything here happens AFTER decompression: it consumes a
+// view-like object (whatever `Copc.Las.View.create` returns) and produces the
+// per-attribute `ArrayBuffer`s plus mean / bounding box / gps + color ranges.
 //
-// `Copc` is a global supplied by libs/copc/index.js, which the concat build
-// (scripts/build-workers.mjs) prepends to this file. It is NOT imported — an ES
-// import would break the classic-worker (no-module) output. It is declared
-// ambiently so this stays type-checked while emitting no runtime import/export.
-declare const Copc: any;
+// The thin worker wrapper (index.ts) owns decompression and `postMessage`; it
+// injects the real Copc view here, and tests inject a synthetic one.
 
-// importScripts('/libs/copc/index.js');
+/**
+ * Minimal shape of the Copc LAS view this decoder consumes.
+ *  - `dimensions` gates optional attributes (`GpsTime`, `Red`/`Green`/`Blue`).
+ *  - `getter(name)` returns a per-index accessor for a named dimension.
+ */
+export interface EptView {
+	dimensions: Record<string, unknown>;
+	getter(name: string): (i: number) => number;
+}
 
-// Web Worker globals: a classic worker exposes `onmessage`/`postMessage` on the
-// global scope. We reach them through `globalThis` because the DOM lib types the
-// global `postMessage` as the `Window` variant (2nd arg = targetOrigin string),
-// which would reject the `(message, transferables)` worker signature.
-const worker = globalThis as unknown as {
-	onmessage: (event: MessageEvent) => void;
-	postMessage: (message: any, transfer?: ArrayBuffer[]) => void;
-};
+export interface EptDecodeParams {
+	pointCount: number;
+	nodemin: number[];
+}
 
-async function readUsingDataView(event: MessageEvent) {
-	performance.mark("laslaz-start");
+export interface EptDecodeResult {
+	position: ArrayBuffer;
+	color: ArrayBuffer;
+	intensity: ArrayBuffer;
+	classification: ArrayBuffer;
+	returnNumber: ArrayBuffer;
+	numberOfReturns: ArrayBuffer;
+	pointSourceId: ArrayBuffer;
+	gpsTime: ArrayBuffer;
+	indices: ArrayBuffer;
+	mean: number[];
+	tightBoundingBox: { min: number[]; max: number[] };
+	gpsMeta: { offset: number; range: number };
+	ranges: Record<string, [number, number]>;
+}
 
-	// TODO: Handle extra-bytes.
-	const { isFullFile, compressed, header, eb, pointCount, nodemin } = event.data;
-	const { pointDataRecordFormat, pointDataRecordLength } = header;
-
-	// Note that for the chunk version, we use the point count passed in the
-	// event rather than the point count from the header, since the header has
-	// the point count for the entire file, not just our slice.
-	const u = new Uint8Array(compressed);
-	const buffer = isFullFile
-		? await Copc.Las.PointData.decompressFile(u)
-		: await Copc.Las.PointData.decompressChunk(
-			u,
-			{ pointDataRecordFormat, pointDataRecordLength, pointCount },
-		);
-
-	const view = Copc.Las.View.create(buffer, header, eb);
+export function decodeEptLaszipView(view: EptView, params: EptDecodeParams): EptDecodeResult {
+	const { pointCount, nodemin } = params;
 
 	const buffers = {
 		position: new ArrayBuffer(pointCount * 3 * 4),
@@ -78,12 +82,17 @@ async function readUsingDataView(event: MessageEvent) {
 		returnNumber: view.getter("ReturnNumber"),
 		numberOfReturns: view.getter("NumberOfReturns"),
 		pointSourceId: view.getter("PointSourceId"),
-		...(view.dimensions.GpsTime && { gpsTime: view.getter("GpsTime") }),
-		...(view.dimensions.Red && {
-			red: view.getter("Red"),
-			green: view.getter("Green"),
-			blue: view.getter("Blue"),
-		}),
+		// Ternaries (rather than `cond && {…}`) so the spread always sees an
+		// object type — `dimensions` values are `unknown`. Behavior is identical:
+		// a falsy dimension contributes an empty spread, i.e. no getter.
+		...(view.dimensions.GpsTime ? { gpsTime: view.getter("GpsTime") } : {}),
+		...(view.dimensions.Red
+			? {
+				red: view.getter("Red"),
+				green: view.getter("Green"),
+				blue: view.getter("Blue"),
+			}
+			: {}),
 	};
 
 	const ranges = [
@@ -175,19 +184,7 @@ async function readUsingDataView(event: MessageEvent) {
 		views.gpsTime32[i] = views.gpsTime64[i] - ranges.gpsTime[0];
 	}
 
-	performance.mark("laslaz-end");
-
-	//{ // print timings
-	//	  performance.measure("laslaz", "laslaz-start", "laslaz-end");
-	//	  let measure = performance.getEntriesByType("measure")[0];
-	//	  let dpp = 1000 * measure.duration / numPoints;
-	//	  let debugMessage = `${measure.duration.toFixed(3)} ms, ${numPoints} points, ${dpp.toFixed(3)} µs / point`;
-	//	  console.log(debugMessage);
-	//}
-	performance.clearMarks();
-	performance.clearMeasures();
-
-	let message = {
+	return {
 		...buffers,
 		mean,
 		tightBoundingBox: {
@@ -207,10 +204,4 @@ async function readUsingDataView(event: MessageEvent) {
 			"gps-time": ranges.gpsTime,
 		},
 	};
-
-	let transferables = Object.values(buffers);
-
-	worker.postMessage(message, transferables);
 }
-
-worker.onmessage = readUsingDataView;
