@@ -7,6 +7,7 @@ const root = process.cwd();
 
 const entries = [
   { out: 'build/potree/workers',     name: 'BinaryDecoderWorker',  file: 'src/workers/BinaryDecoder/index.ts' },
+  { out: 'build/potree/workers',     name: 'LASDecoderWorker',     file: 'src/workers/LASDecoder/index.ts' },
   { out: 'build/potree/workers/2.0', name: 'DecoderWorker',         file: 'src/modules/loader/2.0/DecoderWorker.js' },
   { out: 'build/potree/workers/2.0', name: 'DecoderWorker_brotli',  file: 'src/modules/loader/2.0/DecoderWorker_brotli.js' },
 ];
