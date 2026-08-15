@@ -6,3 +6,12 @@ declare module "*?raw" {
   const source: string;
   export default source;
 }
+
+// Vite/Vitest `import.meta.glob`, used by tests to scan sibling files (e.g. the
+// example HTML pages). Minimal typing — enough for the eager string form.
+interface ImportMeta {
+  glob(
+    pattern: string,
+    options?: { query?: string; import?: string; eager?: boolean },
+  ): Record<string, unknown>;
+}
