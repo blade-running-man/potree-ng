@@ -88,7 +88,7 @@ export class LasLazLoader {
 				data.count,
 				header.scale,
 				header.offset,
-				header.mins, header.maxs));
+				header.mins, header.maxs), header.pointsFormatId);
 
 			totalRead += data.count;
 			LasLazLoader.progressCB(totalRead / totalToRead);
@@ -124,7 +124,7 @@ export class LasLazBatcher{
 		this.node = node;
 	}
 
-	async push (lasBuffer) {
+	async push (lasBuffer, pointFormatID) {
 		const workerPath = Potree.scriptPath + '/workers/LASDecoderWorker.js';
 		const node = this.node;
 		const pointAttributes = node.pcoGeometry.pointAttributes;
@@ -133,7 +133,7 @@ export class LasLazBatcher{
 			buffer: lasBuffer.arrayb,
 			numPoints: lasBuffer.pointsCount,
 			pointSize: lasBuffer.pointSize,
-			pointFormatID: 2,
+			pointFormatID: pointFormatID,
 			scale: lasBuffer.scale,
 			offset: lasBuffer.offset,
 			mins: lasBuffer.mins,

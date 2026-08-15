@@ -22,6 +22,42 @@ export interface LasDecodeResult {
 	ranges: Record<string, [number, number]>;
 }
 
+export interface LasLayout {
+	/**
+	 * How the return-info byte @14 packs returnNumber / numberOfReturns:
+	 *   "3+3" — legacy formats 0-5: returnNumber = bits 0-2, numberOfReturns = bits 3-5.
+	 *   "4+4" — LAS 1.4 formats 6-10: returnNumber = bits 0-3, numberOfReturns = bits 4-7.
+	 */
+	returnBits: "3+3" | "4+4";
+	/** byte offset of the classification field within the point record */
+	classification: number;
+	/** byte offset of the point source id (uint16) within the point record */
+	pointSourceId: number;
+	/** byte offset of the first RGB channel (uint16), or undefined when the format has no color */
+	color?: number;
+}
+
+/**
+ * Per-format LAS point-record layout descriptor. Offsets follow the ASPRS LAS
+ * spec: legacy point formats 0-5 vs. the LAS 1.4 formats 6-10.
+ */
+export function lasLayoutFor(format: number): LasLayout {
+	if (format <= 5) {
+		return {
+			returnBits: "3+3",
+			classification: 15,
+			pointSourceId: 18,
+			color: format === 2 ? 20 : format === 3 ? 28 : undefined,
+		};
+	}
+	return {
+		returnBits: "4+4",
+		classification: 16,
+		pointSourceId: 20,
+		color: (format === 7 || format === 8) ? 30 : undefined,
+	};
+}
+
 /**
  * Pure decode of a raw (already-decompressed) LAS point-record buffer into
  * per-attribute `ArrayBuffer`s, computing the point `mean` and
@@ -73,11 +109,15 @@ export function decodeLasPoints(input: LasDecodeInput): LasDecodeResult {
 	const rangeNumberOfReturns: [number, number] = [Infinity, -Infinity];
 	const rangeSourceID: [number, number] = [Infinity, -Infinity];
 
+	const layout = lasLayoutFor(pointFormatID);
+
 	for (let i = 0; i < numPoints; i++) {
+		const base = i * sourcePointSize;
+
 		// POSITION
-		const ux = sourceView.getInt32(i * sourcePointSize + 0, true);
-		const uy = sourceView.getInt32(i * sourcePointSize + 4, true);
-		const uz = sourceView.getInt32(i * sourcePointSize + 8, true);
+		const ux = sourceView.getInt32(base + 0, true);
+		const uy = sourceView.getInt32(base + 4, true);
+		const uz = sourceView.getInt32(base + 8, true);
 
 		const x = ux * scale[0] + offset[0] - mins[0];
 		const y = uy * scale[1] + offset[1] - mins[1];
@@ -99,17 +139,24 @@ export function decodeLasPoints(input: LasDecodeInput): LasDecodeResult {
 		tightBoundingBox.max[1] = Math.max(tightBoundingBox.max[1], y);
 		tightBoundingBox.max[2] = Math.max(tightBoundingBox.max[2], z);
 
-		// INTENSITY
-		const intensity = sourceView.getUint16(i * sourcePointSize + 12, true);
+		// INTENSITY (always @12)
+		const intensity = sourceView.getUint16(base + 12, true);
 		intensities[i] = intensity;
 		rangeIntensity[0] = Math.min(rangeIntensity[0], intensity);
 		rangeIntensity[1] = Math.max(rangeIntensity[1], intensity);
 
-		// RETURN NUMBER, stored in the first 3 bits - 00000111
-		// number of returns stored in next 3 bits   - 00111000
-		const returnNumberAndNumberOfReturns = sourceView.getUint8(i * sourcePointSize + 14);
-		const returnNumber = returnNumberAndNumberOfReturns & 0b0111;
-		const numberOfReturn = (returnNumberAndNumberOfReturns & 0b00111000) >> 3;
+		// RETURN NUMBER / NUMBER OF RETURNS, packed into the return-info byte @14.
+		// Legacy formats 0-5 pack 3+3 bits; LAS 1.4 formats 6-10 pack 4+4 bits.
+		const returnByte = sourceView.getUint8(base + 14);
+		let returnNumber: number;
+		let numberOfReturn: number;
+		if (layout.returnBits === "4+4") {
+			returnNumber = returnByte & 0b1111;
+			numberOfReturn = (returnByte >> 4) & 0b1111;
+		} else {
+			returnNumber = returnByte & 0b0111;
+			numberOfReturn = (returnByte >> 3) & 0b0111;
+		}
 		returnNumbers[i] = returnNumber;
 		numberOfReturns[i] = numberOfReturn;
 		rangeReturnNumber[0] = Math.min(rangeReturnNumber[0], returnNumber);
@@ -118,22 +165,22 @@ export function decodeLasPoints(input: LasDecodeInput): LasDecodeResult {
 		rangeNumberOfReturns[1] = Math.max(rangeNumberOfReturns[1], numberOfReturn);
 
 		// CLASSIFICATION
-		const classification = sourceView.getUint8(i * sourcePointSize + 15);
+		const classification = sourceView.getUint8(base + layout.classification);
 		classifications[i] = classification;
 		rangeClassification[0] = Math.min(rangeClassification[0], classification);
 		rangeClassification[1] = Math.max(rangeClassification[1], classification);
 
 		// POINT SOURCE ID
-		const pointSourceID = sourceView.getUint16(i * sourcePointSize + 18, true);
+		const pointSourceID = sourceView.getUint16(base + layout.pointSourceId, true);
 		pointSourceIDs[i] = pointSourceID;
 		rangeSourceID[0] = Math.min(rangeSourceID[0], pointSourceID);
 		rangeSourceID[1] = Math.max(rangeSourceID[1], pointSourceID);
 
-		// COLOR, if available
-		if (pointFormatID === 2) {
-			const r = sourceView.getUint16(i * sourcePointSize + 20, true) / 256;
-			const g = sourceView.getUint16(i * sourcePointSize + 22, true) / 256;
-			const b = sourceView.getUint16(i * sourcePointSize + 24, true) / 256;
+		// COLOR, if the format carries it
+		if (layout.color !== undefined) {
+			const r = sourceView.getUint16(base + layout.color + 0, true) / 256;
+			const g = sourceView.getUint16(base + layout.color + 2, true) / 256;
+			const b = sourceView.getUint16(base + layout.color + 4, true) / 256;
 
 			colors[4 * i + 0] = r;
 			colors[4 * i + 1] = g;
