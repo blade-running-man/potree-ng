@@ -129,3 +129,101 @@ describe("decodeBinaryAttributes — R9: 64-bit getters", () => {
 		expect(attr.range).toEqual([-5, 5]);
 	});
 });
+
+describe("decodeBinaryAttributes — R10: tidy", () => {
+	it("decodes rgba as opaque (alpha = 255)", () => {
+		const attr = new PointAttribute("rgba", PointAttributeTypes.DATA_TYPE_UINT8, 4);
+		const pa = new PointAttributes();
+		pa.add(attr);
+
+		const buffer = new ArrayBuffer(1 * pa.byteSize);
+		const view = new DataView(buffer);
+		view.setUint8(0, 10);
+		view.setUint8(1, 20);
+		view.setUint8(2, 30);
+		view.setUint8(3, 123); // source alpha is ignored; output must be opaque
+
+		const result = decodeBinaryAttributes({
+			buffer,
+			pointAttributes: pa,
+			version: "1.4",
+			offset: [0, 0, 0],
+			scale: 1,
+		});
+
+		const colors = new Uint8Array(result.attributeBuffers["rgba"].buffer);
+		expect(Array.from(colors)).toEqual([10, 20, 30, 255]);
+	});
+
+	it("packs a size>4 double attribute into f32 with correct offset/scale", () => {
+		// Locks the min/max single-pass collapse: numeric output must not change.
+		const attr = new PointAttribute("gps", PointAttributeTypes.DATA_TYPE_DOUBLE, 1);
+		const pa = new PointAttributes();
+		pa.add(attr);
+
+		const buffer = new ArrayBuffer(3 * pa.byteSize);
+		const view = new DataView(buffer);
+		view.setFloat64(0, 100, true);
+		view.setFloat64(8, 200, true);
+		view.setFloat64(16, 300, true);
+
+		const result = decodeBinaryAttributes({
+			buffer,
+			pointAttributes: pa,
+			version: "1.4",
+			offset: [0, 0, 0],
+			scale: 1,
+		});
+
+		const decoded = result.attributeBuffers["gps"];
+		expect(decoded.offset).toBe(100); // min
+		expect(decoded.scale).toBeCloseTo(1 / 200, 12); // 1 / (max - min)
+		expect(attr.range).toEqual([100, 300]);
+
+		const f32 = new Float32Array(decoded.buffer);
+		expect(f32[0]).toBeCloseTo(0, 6);
+		expect(f32[1]).toBeCloseTo(0.5, 6);
+		expect(f32[2]).toBeCloseTo(1, 6);
+
+		// preciseBuffer keeps the raw doubles.
+		expect(Array.from(decoded.preciseBuffer as Float64Array)).toEqual([100, 200, 300]);
+	});
+
+	it("packs a size<=4 attribute deriving range from the packing pass", () => {
+		// size<=4 has no pre-pass; min/max come from the packing loop only.
+		const attr = new PointAttribute("intensity", PointAttributeTypes.DATA_TYPE_UINT16, 1);
+		const pa = new PointAttributes();
+		pa.add(attr);
+
+		const buffer = new ArrayBuffer(3 * pa.byteSize);
+		const view = new DataView(buffer);
+		view.setUint16(0, 10, true);
+		view.setUint16(2, 30, true);
+		view.setUint16(4, 20, true);
+
+		const result = decodeBinaryAttributes({
+			buffer,
+			pointAttributes: pa,
+			version: "1.4",
+			offset: [0, 0, 0],
+			scale: 1,
+		});
+
+		const decoded = result.attributeBuffers["intensity"];
+		// size<=4 keeps offset/scale at their identity defaults.
+		expect(decoded.offset).toBe(0);
+		expect(decoded.scale).toBe(1);
+		expect(attr.range).toEqual([10, 30]);
+		const f32 = new Float32Array(decoded.buffer);
+		expect(Array.from(f32)).toEqual([10, 30, 20]);
+	});
+});
+
+describe("decodeBinaryAttributes — uncovered decode paths", () => {
+	// Real behaviors not yet asserted; listed so the gaps are visible in output.
+	it.todo("decodes NORMAL_SPHEREMAPPED");
+	it.todo("decodes NORMAL_OCT16 to a unit vector");
+	it.todo("decodes a plain NORMAL float-triple attribute");
+	it.todo("reconstructs attribute vectors from source attributes");
+	it.todo("packs a size>4 attribute using initialRange when provided");
+});

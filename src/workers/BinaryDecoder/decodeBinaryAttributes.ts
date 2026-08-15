@@ -96,6 +96,7 @@ export function decodeBinaryAttributes(input: DecodeBinaryInput): DecodeBinaryRe
 				colors[4 * j + 0] = view.getUint8(inOffset + j * pointAttributes.byteSize + 0);
 				colors[4 * j + 1] = view.getUint8(inOffset + j * pointAttributes.byteSize + 1);
 				colors[4 * j + 2] = view.getUint8(inOffset + j * pointAttributes.byteSize + 2);
+				colors[4 * j + 3] = 255; // source carries no usable alpha; emit opaque
 			}
 
 			attributeBuffers[pointAttribute.name] = { buffer: buff, attribute: pointAttribute };
@@ -187,8 +188,13 @@ export function decodeBinaryAttributes(input: DecodeBinaryInput): DecodeBinaryRe
 			const TypedArray = typedArrayMapping[pointAttribute.type.name];
 			const preciseBuffer = new TypedArray(numPoints);
 
-			let [min, max] = [Infinity, -Infinity];
-			let [offset, scale] = [0, 1];
+			let min = Infinity;
+			let max = -Infinity;
+			// local packing transform; the returned attributeBuffer still exposes
+			// these as `offset`/`scale` (only the locals are renamed to avoid
+			// shadowing the node-level `scale`).
+			let attrOffset = 0;
+			let attrScale = 1;
 
 			const getterMap: Record<string, any> = {
 				"int8":   view.getInt8,
@@ -209,7 +215,9 @@ export function decodeBinaryAttributes(input: DecodeBinaryInput): DecodeBinaryRe
 			const is64 = typeName === "int64" || typeName === "uint64";
 			const getter = is64 ? (o: number, le: boolean) => Number(rawGetter(o, le)) : rawGetter;
 
-			// compute offset and scale to pack larger types into 32 bit floats
+			// Larger-than-f32 types need a pre-pass over all values to derive the
+			// offset/scale that packs them into 32-bit floats. size<=4 types have
+			// no pre-pass; their min/max fall out of the single packing loop below.
 			if (pointAttribute.type.size > 4) {
 				for (let j = 0; j < numPoints; j++) {
 					const value = getter(inOffset + j * pointAttributes.byteSize, true);
@@ -221,23 +229,25 @@ export function decodeBinaryAttributes(input: DecodeBinaryInput): DecodeBinaryRe
 				}
 
 				if (pointAttribute.initialRange != null) {
-					offset = pointAttribute.initialRange[0];
-					scale = 1 / (pointAttribute.initialRange[1] - pointAttribute.initialRange[0]);
+					attrOffset = pointAttribute.initialRange[0];
+					attrScale = 1 / (pointAttribute.initialRange[1] - pointAttribute.initialRange[0]);
 				} else {
-					offset = min;
-					scale = 1 / (max - min);
+					attrOffset = min;
+					attrScale = 1 / (max - min);
 				}
 			}
 
 			for (let j = 0; j < numPoints; j++) {
 				const value = getter(inOffset + j * pointAttributes.byteSize, true);
 
-				if (!Number.isNaN(value)) {
+				// For size>4 the min/max are already final from the pre-pass;
+				// only size<=4 derives its range here.
+				if (pointAttribute.type.size <= 4 && !Number.isNaN(value)) {
 					min = Math.min(min, value);
 					max = Math.max(max, value);
 				}
 
-				f32[j] = (value - offset) * scale;
+				f32[j] = (value - attrOffset) * attrScale;
 				preciseBuffer[j] = value;
 			}
 
@@ -247,8 +257,8 @@ export function decodeBinaryAttributes(input: DecodeBinaryInput): DecodeBinaryRe
 				buffer: buff,
 				preciseBuffer: preciseBuffer,
 				attribute: pointAttribute,
-				offset: offset,
-				scale: scale,
+				offset: attrOffset,
+				scale: attrScale,
 			};
 		}
 
