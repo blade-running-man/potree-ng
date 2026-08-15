@@ -39,65 +39,8 @@ export class EptBinaryLoader {
 		}
 	}
 
-	parse(node, buffer) {
+	async parse(node, buffer) {
 		let workerPath = this.workerPath();
-		let worker = Potree.workerPool.getWorker(workerPath);
-
-		worker.onmessage = function(e) {
-			let g = new THREE.BufferGeometry();
-			let numPoints = e.data.numPoints;
-
-			let position = new Float32Array(e.data.position);
-			g.setAttribute('position', new THREE.BufferAttribute(position, 3));
-
-			let indices = new Uint8Array(e.data.indices);
-			g.setAttribute('indices', new THREE.BufferAttribute(indices, 4));
-
-			if (e.data.color) {
-				let color = new Uint8Array(e.data.color);
-				g.setAttribute('color', new THREE.BufferAttribute(color, 4, true));
-			}
-			if (e.data.intensity) {
-				let intensity = new Float32Array(e.data.intensity);
-				g.setAttribute('intensity',
-						new THREE.BufferAttribute(intensity, 1));
-			}
-			if (e.data.classification) {
-				let classification = new Uint8Array(e.data.classification);
-				g.setAttribute('classification',
-						new THREE.BufferAttribute(classification, 1));
-			}
-			if (e.data.returnNumber) {
-				let returnNumber = new Uint8Array(e.data.returnNumber);
-				g.setAttribute('return number',
-						new THREE.BufferAttribute(returnNumber, 1));
-			}
-			if (e.data.numberOfReturns) {
-				let numberOfReturns = new Uint8Array(e.data.numberOfReturns);
-				g.setAttribute('number of returns',
-						new THREE.BufferAttribute(numberOfReturns, 1));
-			}
-			if (e.data.pointSourceId) {
-				let pointSourceId = new Uint16Array(e.data.pointSourceId);
-				g.setAttribute('source id',
-						new THREE.BufferAttribute(pointSourceId, 1));
-			}
-
-			g.attributes.indices.normalized = true;
-
-			let tightBoundingBox = new THREE.Box3(
-				new THREE.Vector3().fromArray(e.data.tightBoundingBox.min),
-				new THREE.Vector3().fromArray(e.data.tightBoundingBox.max)
-			);
-
-			node.doneLoading(
-					g,
-					tightBoundingBox,
-					numPoints,
-					new THREE.Vector3(...e.data.mean));
-
-			Potree.workerPool.returnWorker(workerPath, worker);
-		};
 
 		let toArray = (v) => [v.x, v.y, v.z];
 		let message = {
@@ -108,7 +51,57 @@ export class EptBinaryLoader {
 			mins: toArray(node.key.b.min)
 		};
 
-		worker.postMessage(message, [message.buffer]);
+		try {
+			let data = await Potree.workerPool.runWorker(workerPath, message, [message.buffer]);
+
+			let g = new THREE.BufferGeometry();
+			let numPoints = data.numPoints;
+
+			let position = new Float32Array(data.position);
+			g.setAttribute('position', new THREE.BufferAttribute(position, 3));
+
+			let indices = new Uint8Array(data.indices);
+			g.setAttribute('indices', new THREE.BufferAttribute(indices, 4));
+
+			if (data.color) {
+				let color = new Uint8Array(data.color);
+				g.setAttribute('color', new THREE.BufferAttribute(color, 4, true));
+			}
+			if (data.intensity) {
+				let intensity = new Float32Array(data.intensity);
+				g.setAttribute('intensity', new THREE.BufferAttribute(intensity, 1));
+			}
+			if (data.classification) {
+				let classification = new Uint8Array(data.classification);
+				g.setAttribute('classification', new THREE.BufferAttribute(classification, 1));
+			}
+			if (data.returnNumber) {
+				let returnNumber = new Uint8Array(data.returnNumber);
+				g.setAttribute('return number', new THREE.BufferAttribute(returnNumber, 1));
+			}
+			if (data.numberOfReturns) {
+				let numberOfReturns = new Uint8Array(data.numberOfReturns);
+				g.setAttribute('number of returns', new THREE.BufferAttribute(numberOfReturns, 1));
+			}
+			if (data.pointSourceId) {
+				let pointSourceId = new Uint16Array(data.pointSourceId);
+				g.setAttribute('source id', new THREE.BufferAttribute(pointSourceId, 1));
+			}
+
+			g.attributes.indices.normalized = true;
+
+			let tightBoundingBox = new THREE.Box3(
+				new THREE.Vector3().fromArray(data.tightBoundingBox.min),
+				new THREE.Vector3().fromArray(data.tightBoundingBox.max)
+			);
+
+			node.doneLoading(g, tightBoundingBox, numPoints, new THREE.Vector3(...data.mean));
+		} catch (err) {
+			console.error(`EptBinaryDecoderWorker failed for node ${node.name}:`, err);
+			node.loading = false;
+		} finally {
+			Potree.numNodesLoading--;
+		}
 	}
 };
 
