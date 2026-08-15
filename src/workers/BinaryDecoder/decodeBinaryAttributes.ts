@@ -194,15 +194,20 @@ export function decodeBinaryAttributes(input: DecodeBinaryInput): DecodeBinaryRe
 				"int8":   view.getInt8,
 				"int16":  view.getInt16,
 				"int32":  view.getInt32,
-				"int64":  (view as any).getInt64,
+				"int64":  view.getBigInt64,
 				"uint8":  view.getUint8,
 				"uint16": view.getUint16,
 				"uint32": view.getUint32,
-				"uint64": (view as any).getUint64,
+				"uint64": view.getBigUint64,
 				"float":  view.getFloat32,
 				"double": view.getFloat64,
 			};
-			const getter = getterMap[pointAttribute.type.name].bind(view);
+			const typeName = pointAttribute.type.name;
+			const rawGetter = getterMap[typeName].bind(view);
+			// getBigInt64/getBigUint64 return BigInt; coerce to Number so the
+			// min/max and packing arithmetic below stays in the Number domain.
+			const is64 = typeName === "int64" || typeName === "uint64";
+			const getter = is64 ? (o: number, le: boolean) => Number(rawGetter(o, le)) : rawGetter;
 
 			// compute offset and scale to pack larger types into 32 bit floats
 			if (pointAttribute.type.size > 4) {

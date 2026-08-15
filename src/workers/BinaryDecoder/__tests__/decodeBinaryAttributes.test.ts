@@ -67,3 +67,65 @@ describe("decodeBinaryAttributes — POSITION_CARTESIAN (characterization)", () 
 		expect(positions[2]).toBeCloseTo(33.5, 5);
 	});
 });
+
+describe("decodeBinaryAttributes — R9: 64-bit getters", () => {
+	it("decodes a uint64 attribute via getBigUint64 without throwing", () => {
+		// A generic numeric attribute named so it hits the packing branch.
+		const attr = new PointAttribute("classification64", PointAttributeTypes.DATA_TYPE_UINT64, 1);
+		const pa = new PointAttributes();
+		pa.add(attr);
+
+		const buffer = new ArrayBuffer(2 * pa.byteSize);
+		const view = new DataView(buffer);
+		view.setBigUint64(0, 42n, true);
+		view.setBigUint64(8, 100n, true);
+
+		let result: ReturnType<typeof decodeBinaryAttributes>;
+		expect(() => {
+			result = decodeBinaryAttributes({
+				buffer,
+				pointAttributes: pa,
+				version: "1.4",
+				offset: [0, 0, 0],
+				scale: 1,
+			});
+		}).not.toThrow();
+
+		const decoded = result!.attributeBuffers["classification64"];
+		// preciseBuffer holds the un-packed original values (Float64Array for uint64).
+		expect(decoded.preciseBuffer[0]).toBe(42);
+		expect(decoded.preciseBuffer[1]).toBe(100);
+
+		// size>4 packs into f32 via derived offset/scale: (v - min) / (max - min).
+		expect(decoded.offset).toBe(42);
+		const f32 = new Float32Array(decoded.buffer);
+		expect(f32[0]).toBeCloseTo(0, 6);
+		expect(f32[1]).toBeCloseTo(1, 6);
+		expect(attr.range).toEqual([42, 100]);
+	});
+
+	it("decodes an int64 attribute via getBigInt64 (negative values)", () => {
+		const attr = new PointAttribute("signed64", PointAttributeTypes.DATA_TYPE_INT64, 1);
+		const pa = new PointAttributes();
+		pa.add(attr);
+
+		const buffer = new ArrayBuffer(2 * pa.byteSize);
+		const view = new DataView(buffer);
+		view.setBigInt64(0, -5n, true);
+		view.setBigInt64(8, 5n, true);
+
+		const result = decodeBinaryAttributes({
+			buffer,
+			pointAttributes: pa,
+			version: "1.4",
+			offset: [0, 0, 0],
+			scale: 1,
+		});
+
+		const decoded = result.attributeBuffers["signed64"];
+		expect(decoded.preciseBuffer[0]).toBe(-5);
+		expect(decoded.preciseBuffer[1]).toBe(5);
+		expect(decoded.offset).toBe(-5);
+		expect(attr.range).toEqual([-5, 5]);
+	});
+});
