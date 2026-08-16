@@ -46,17 +46,41 @@ export class EptBinaryLoader {
 		}
 	}
 
+	// parseEpt (the worker) applies `raw * scale.{x,y,z} + offset.{x,y,z} - mins`.
+	// The EPT metadata lives on the geometry (node.owner.ept); XYZ scale/offset are
+	// per-dimension in the schema (older EPT files put them at the top level), and
+	// mins is the node's bounds minimum (matching EptLaszipLoader).
+	workerMessage(node, buffer) {
+		const { Bounds } = window.Copc;
+		const ept = node.owner.ept;
+		const schema = ept.schema;
+
+		const dim = (name) => schema.find((d) => d.name === name) || {};
+		const pick = (d, key, fallback) => (d[key] !== undefined ? d[key] : fallback);
+		const gScale = Array.isArray(ept.scale) ? ept.scale : [1, 1, 1];
+		const gOffset = Array.isArray(ept.offset) ? ept.offset : [0, 0, 0];
+		const [dx, dy, dz] = ['X', 'Y', 'Z'].map(dim);
+
+		return {
+			buffer: buffer,
+			schema: schema,
+			scale: {
+				x: pick(dx, 'scale', gScale[0]),
+				y: pick(dy, 'scale', gScale[1]),
+				z: pick(dz, 'scale', gScale[2]),
+			},
+			offset: {
+				x: pick(dx, 'offset', gOffset[0]),
+				y: pick(dy, 'offset', gOffset[1]),
+				z: pick(dz, 'offset', gOffset[2]),
+			},
+			mins: Bounds.min(node.bounds),
+		};
+	}
+
 	async parse(node, buffer) {
 		let workerPath = this.workerPath();
-
-		let toArray = (v) => [v.x, v.y, v.z];
-		let message = {
-			buffer: buffer,
-			schema: node.ept.schema,
-			scale: node.ept.eptScale,
-			offset: node.ept.eptOffset,
-			mins: toArray(node.key.b.min)
-		};
+		let message = this.workerMessage(node, buffer);
 
 		try {
 			let data = await Potree.workerPool.runWorker(workerPath, message, [message.buffer]);
