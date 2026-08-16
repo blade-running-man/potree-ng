@@ -4,7 +4,11 @@
 // self-contained — it may only reference its argument, never module scope,
 // because Playwright serialises it by source. It returns raw per-frame deltas;
 // the pure `computeFrameStats` derives statistics on the Node side so the maths
-// stay unit-testable.
+// stay unit-testable. Only the Node-side `computeFrameStats` uses the imported
+// `percentile`; `sampleFrames` never references module scope, so the import is
+// safe from the serialisation constraint above.
+
+import { percentile } from './measure-timings';
 
 export interface FrameSample {
   /** Milliseconds between consecutive animation frames. */
@@ -74,7 +78,6 @@ export function computeFrameStats(sample: FrameSample): FrameStats {
   const sorted = [...frames].sort((a, b) => a - b);
   const sum = frames.reduce((acc, d) => acc + d, 0);
   const avgFrameMs = sum / frames.length;
-  const p95Index = Math.min(sorted.length - 1, Math.ceil(sorted.length * 0.95) - 1);
 
   return {
     frames: frames.length,
@@ -82,7 +85,7 @@ export function computeFrameStats(sample: FrameSample): FrameStats {
     avgFrameMs,
     minFrameMs: sorted[0],
     maxFrameMs: sorted[sorted.length - 1],
-    p95FrameMs: sorted[p95Index],
+    p95FrameMs: percentile(sorted, 0.95),
     fps: avgFrameMs > 0 ? 1000 / avgFrameMs : 0,
   };
 }

@@ -214,4 +214,90 @@ export class PotreeViewerPage {
     }, size);
     await this.waitForFrames(2);
   }
+
+  // --- Perf harness ----------------------------------------------------------
+  //
+  // `render.renderNodes` measures are only emitted when the `Potree` UMD
+  // namespace has `measureTimings` truthy (verified against
+  // src/PotreeRenderer.js, gated by `exports.measureTimings`, which is the
+  // same object as `window.Potree` per the UMD factory in
+  // src/Potree.js/build/potree/potree.js: `factory(global.Potree = {})`).
+
+  /** Enable the built-in renderNodes profiler (gates performance.measure calls). */
+  async enableMeasureTimings(): Promise<void> {
+    await this.page.evaluate(() => {
+      (window as any).Potree.measureTimings = true;
+    });
+  }
+
+  /**
+   * Deterministically place the camera. `preset` is one of the fixed
+   * viewpoints, derived from the loaded point cloud's world-space bounding
+   * box (`viewer.scene.getBoundingBox()`, which applies `matrixWorld` —
+   * unlike the pointcloud's local `boundingBox`). Camera state is set via
+   * `View.setView(position, target, 0)` (duration 0 = synchronous placement),
+   * the same `(position, target, duration)` entry point used by
+   * `src/modules/Images360/Images360.js`, so no `THREE` global is needed (the
+   * example pages don't expose one — `View.js` constructs its own
+   * `THREE.Vector3` from the array args internally).
+   */
+  async setViewpoint(preset: 'overview' | 'interior' | 'closeup'): Promise<void> {
+    await this.page.evaluate((p) => {
+      const viewer = (window as any).viewer;
+      const box = viewer.scene.getBoundingBox();
+      const cx = (box.min.x + box.max.x) / 2;
+      const cy = (box.min.y + box.max.y) / 2;
+      const cz = (box.min.z + box.max.z) / 2;
+      const sx = box.max.x - box.min.x;
+      const sy = box.max.y - box.min.y;
+      const sz = box.max.z - box.min.z;
+      const size = Math.sqrt(sx * sx + sy * sy + sz * sz);
+
+      const dist =
+        p === 'overview'
+          ? size * 1.2
+          : p === 'interior'
+            ? size * 0.4
+            : size * 0.05; // closeup → most visible nodes / highest LOD (see BASELINE.md closeup caveat)
+
+      viewer.scene.view.setView(
+        [cx + dist, cy + dist, cz + dist],
+        [cx, cy, cz],
+        0,
+      );
+    }, preset);
+    // Let visibility update + a few frames settle so the new frustum is drawn.
+    await this.waitForFrames(5);
+  }
+
+  /**
+   * Sample `render.renderNodes` measures over `frames` animation frames.
+   * Clears existing measures, waits, then reads durations back.
+   *
+   * Note: while `Potree.measureTimings` is enabled, the viewer's own
+   * `resolveTimings()` (src/viewer/viewer.js) clears ALL marks/measures
+   * roughly once per second of elapsed render time as a side effect of
+   * logging its own diagnostic table. A sampling window that spans one of
+   * those clears will simply see fewer than `frames` entries (never a
+   * failure) — keep `frames` small enough that a call finishes well under a
+   * second on the target hardware to get full samples.
+   */
+  async sampleRenderNodes(frames = 120): Promise<number[]> {
+    return this.page.evaluate(async (n) => {
+      performance.clearMeasures('render.renderNodes');
+      await new Promise<void>((resolve) => {
+        let seen = 0;
+        const tick = () => {
+          seen++;
+          if (seen >= n) resolve();
+          else requestAnimationFrame(tick);
+        };
+        requestAnimationFrame(tick);
+      });
+      return performance
+        .getEntriesByType('measure')
+        .filter((m) => m.name === 'render.renderNodes')
+        .map((m) => m.duration);
+    }, frames);
+  }
 }

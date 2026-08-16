@@ -124,3 +124,55 @@ Ordered roughly by value for tracking Potree refactors:
   settles (extends the interaction specs with timing).
 - **Full CPU profile / flamegraph** — CDP `Profiler` or `Tracing` for a one-off
   deep dive when a regression is found (too heavy for every run).
+
+## Tier 0 baseline (pre-optimization) — `render.renderNodes` at fixed viewpoints
+
+Produced by `tests/e2e/specs/render-perf.spec.ts`, which enables
+`Potree.measureTimings` and samples the `render.renderNodes`
+`performance.measure` (the octree draw loop in `src/PotreeRenderer.js`) for
+120 animation frames at each of three deterministic camera placements
+(`PotreeViewerPage.setViewpoint`, driven off `viewer.scene.getBoundingBox()` +
+`View.setView(position, target, 0)`):
+
+- **overview** — camera at `1.2x` the bounding-box diagonal from its center.
+- **interior** — camera at `0.4x` the diagonal.
+- **closeup** — camera at `0.05x` the diagonal (inside the bounding box —
+  intended as a heavy-overdraw case; see caveat below).
+
+Recorded on the same machine/browser as the table above (Chromium via
+Playwright, headed, vsync/frame-cap disabled). Raw output:
+`test-results/perf/render-perf.json` (gitignored).
+
+| Viewpoint | Visible nodes | Visible points | `render.renderNodes` avg (ms) | p95 (ms) |
+|---|---:|---:|---:|---:|
+| overview | 31 | 72,346 | 0.033 | 0.100 |
+| interior | 52 | 272,450 | 1.188 | 2.300 |
+| closeup | 95 | 169,236 | 0.968 | 2.200 |
+
+Notes:
+- `count` was 120/120 samples at every viewpoint (no dropped samples from the
+  viewer's periodic `performance.clearMeasures()` — see caveat below).
+- Node/point counts fluctuate a few % run to run (same streaming variance as
+  the load metrics above); `render.renderNodes` timing is the stable signal.
+- **Closeup caveat**: placing the camera *inside* the bounding box (`0.05x`
+  diagonal from center, looking at center) produces the most visible nodes
+  (95, the highest LOD selection) but fewer visible points and lower avg
+  render time than `interior` — near-plane clipping through the geometry
+  reduces what's actually drawn, so this preset is not yet the guaranteed
+  worst-case overdraw scenario the name implies. A future tuning pass should
+  place `closeup` just outside the surface (e.g. offset from a point on the
+  bounding sphere rather than scaled through the center) if a true
+  worst-case fill-rate stress point is needed.
+- **Renderer fix required to use this harness**: `Potree.measureTimings`
+  enables `Viewer.resolveTimings()` (`src/viewer/viewer.js`), which every
+  ~1s of elapsed render time called `Potree.resolveQueries(...)` — a
+  GL-timer-query resolver that was never carried over in the r124→r185
+  WebGL2 migration and doesn't exist. Since `resolveTimings()` runs inside
+  the `setAnimationLoop` callback with no surrounding try/catch, the
+  resulting `TypeError` silently killed the render loop (no further
+  `requestAnimationFrame`/`setAnimationLoop` callbacks) after ~1s with
+  `measureTimings` on — breaking the very feature this perf harness
+  depends on. Fixed with a minimal guard (`typeof Potree.resolveQueries ===
+  "function"`) so the diagnostic table just omits the GL-timer-query rows
+  when unavailable, matching the existing "orphaned API from the WebGL2
+  migration" pattern elsewhere in this codebase.
