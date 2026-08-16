@@ -13,12 +13,12 @@ function paramThreeToGL(_gl, p) {
 	if (p === THREE.MirroredRepeatWrapping) return _gl.MIRRORED_REPEAT;
 
 	if (p === THREE.NearestFilter) return _gl.NEAREST;
-	if (p === THREE.NearestMipMapNearestFilter) return _gl.NEAREST_MIPMAP_NEAREST;
-	if (p === THREE.NearestMipMapLinearFilter) return _gl.NEAREST_MIPMAP_LINEAR;
+	if (p === THREE.NearestMipmapNearestFilter) return _gl.NEAREST_MIPMAP_NEAREST;
+	if (p === THREE.NearestMipmapLinearFilter) return _gl.NEAREST_MIPMAP_LINEAR;
 
 	if (p === THREE.LinearFilter) return _gl.LINEAR;
-	if (p === THREE.LinearMipMapNearestFilter) return _gl.LINEAR_MIPMAP_NEAREST;
-	if (p === THREE.LinearMipMapLinearFilter) return _gl.LINEAR_MIPMAP_LINEAR;
+	if (p === THREE.LinearMipmapNearestFilter) return _gl.LINEAR_MIPMAP_NEAREST;
+	if (p === THREE.LinearMipmapLinearFilter) return _gl.LINEAR_MIPMAP_LINEAR;
 
 	if (p === THREE.UnsignedByteType) return _gl.UNSIGNED_BYTE;
 	if (p === THREE.UnsignedShort4444Type) return _gl.UNSIGNED_SHORT_4_4_4_4;
@@ -34,7 +34,6 @@ function paramThreeToGL(_gl, p) {
 	if (p === THREE.HalfFloatType) return _gl.HALF_FLOAT;
 
 	if (p === THREE.AlphaFormat) return _gl.ALPHA;
-	if (p === THREE.RGBFormat) return _gl.RGB;
 	if (p === THREE.RGBAFormat) return _gl.RGBA;
 	if (p === THREE.DepthFormat) return _gl.DEPTH_COMPONENT;
 	if (p === THREE.DepthStencilFormat) return _gl.DEPTH_STENCIL;
