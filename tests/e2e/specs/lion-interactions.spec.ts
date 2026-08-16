@@ -83,6 +83,40 @@ test.describe('examples/lion.html interactions', () => {
     expect(runtimeErrors).toEqual([]);
   });
 
+  test('switching the active attribute round-trips through the baked VAO', async ({
+    viewerPage,
+    runtimeErrors,
+  }) => {
+    // The renderer binds a pre-baked per-node VAO instead of re-specifying
+    // vertexAttribPointer every frame. Switching the active attribute and
+    // switching back must keep drawing every point cloud correctly — a
+    // corrupted or stale VAO would drop points or raise a GL/runtime error.
+    // lion's geometry attributes (position/rgba/normal) are all fixed-location,
+    // so every hop exercises the primary-VAO ("just bind it") path.
+    const start = await viewerPage.getActiveAttribute();
+    expect(start, 'lion starts coloured by rgba').toBe('rgba');
+
+    // rgba -> intensity -> rgba -> normal -> rgba, asserting rendering persists
+    // and no runtime error is raised after each recompile + VAO bind.
+    for (const attr of ['intensity', 'rgba', 'normal', 'rgba']) {
+      await viewerPage.setActiveAttribute(attr);
+      expect(await viewerPage.getActiveAttribute(), `active attribute is ${attr}`).toBe(attr);
+      expect(
+        (await viewerPage.snapshot()).numVisiblePoints,
+        `still rendering after switching to ${attr}`,
+      ).toBeGreaterThan(0);
+      expect(runtimeErrors, `no runtime error after switching to ${attr}`).toEqual([]);
+    }
+
+    // Round-trip must return to the original colouring, still drawing.
+    expect(await viewerPage.getActiveAttribute(), 'returned to rgba').toBe('rgba');
+    expect(
+      (await viewerPage.snapshot()).numVisiblePoints,
+      'still rendering after full round-trip',
+    ).toBeGreaterThan(0);
+    expect(runtimeErrors).toEqual([]);
+  });
+
   test('changing the point size applies and keeps rendering', async ({
     viewerPage,
     runtimeErrors,

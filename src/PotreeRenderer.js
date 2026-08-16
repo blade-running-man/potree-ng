@@ -467,6 +467,8 @@ class WebGLBuffer {
 	constructor() {
 		this.numElements = 0;
 		this.vao = null;
+		this.extraVao = null;
+		this.extraAttributeName = null;
 		this.vbos = new Map();
 	}
 
@@ -498,8 +500,42 @@ export class Renderer {
 			for (let attributeName in geometry.attributes) {
 				gl.deleteBuffer(webglBuffer.vbos.get(attributeName).handle);
 			}
+			if (webglBuffer.vao) gl.deleteVertexArray(webglBuffer.vao);
+			if (webglBuffer.extraVao) gl.deleteVertexArray(webglBuffer.extraVao);
 			this.buffers.delete(geometry);
 		}
+	}
+
+	// Build (or rebuild) the secondary VAO used only when visualizing an
+	// "extra" attribute via aExtra. Kept separate so the primary VAO layout is
+	// never mutated per-frame. It bakes the fixed-location attributes; aExtra
+	// itself is pointed at the active attribute at draw time in renderNodes.
+	buildExtraVao(webglBuffer, geometry){
+		let gl = this.gl;
+
+		if(webglBuffer.extraVao !== null){
+			gl.deleteVertexArray(webglBuffer.extraVao);
+		}
+
+		webglBuffer.extraVao = gl.createVertexArray();
+		gl.bindVertexArray(webglBuffer.extraVao);
+
+		for(const attributeName in geometry.attributes){
+			if(attributeLocations[attributeName] === undefined) continue;
+
+			const loc = attributeLocations[attributeName].location;
+			const vbo = webglBuffer.vbos.get(attributeName);
+			const type = this.glTypeMapping.get(geometry.attributes[attributeName].array.constructor);
+
+			gl.bindBuffer(gl.ARRAY_BUFFER, vbo.handle);
+			gl.vertexAttribPointer(loc, geometry.attributes[attributeName].itemSize, type, geometry.attributes[attributeName].normalized, 0, 0);
+			gl.enableVertexAttribArray(loc);
+		}
+
+		gl.bindBuffer(gl.ARRAY_BUFFER, null);
+		gl.bindVertexArray(null);
+
+		webglBuffer.extraAttributeName = null; // which attr aExtra currently points at
 	}
 
 	createBuffer(geometry){
@@ -542,6 +578,8 @@ export class Renderer {
 
 		gl.bindBuffer(gl.ARRAY_BUFFER, null);
 		gl.bindVertexArray(null);
+
+		this.buildExtraVao(webglBuffer, geometry);
 
 		let disposeHandler = (event) => {
 			this.deleteBuffer(geometry);
@@ -597,6 +635,11 @@ export class Renderer {
 
 		gl.bindBuffer(gl.ARRAY_BUFFER, null);
 		gl.bindVertexArray(null);
+
+		// updateBuffer re-specifies the primary VAO above; rebuild the extra VAO
+		// to keep its baked layout in sync (a newly created VBO would otherwise
+		// leave stale pointers) and force aExtra to re-bind on the next draw.
+		this.buildExtraVao(webglBuffer, geometry);
 	}
 
 	traverse(scene) {
@@ -879,88 +922,43 @@ export class Renderer {
 				}
 			}
 
-			gl.bindVertexArray(webglBuffer.vao);
-
-			let isExtraAttribute =
+			const isExtraAttribute =
 				attributeLocations[material.activeAttributeName] === undefined
 				&& Object.keys(geometry.attributes).includes(material.activeAttributeName);
 
-			if(isExtraAttribute){
-
-				const attributeLocation = attributeLocations["aExtra"].location;
-
-				for(const attributeName in geometry.attributes){
-					const bufferAttribute = geometry.attributes[attributeName];
-					const vbo = webglBuffer.vbos.get(attributeName);
-					
-					gl.bindBuffer(gl.ARRAY_BUFFER, vbo.handle);
-					gl.disableVertexAttribArray(attributeLocation);
-				}
-
+			if (isExtraAttribute) {
+				// Point aExtra at the active attribute on the dedicated extra VAO,
+				// only re-specifying when the active attribute changed.
+				gl.bindVertexArray(webglBuffer.extraVao);
 				const attName = material.activeAttributeName;
-				const bufferAttribute = geometry.attributes[attName];
-				const vbo = webglBuffer.vbos.get(attName);
-
-				if(bufferAttribute !== undefined && vbo !== undefined){
-					let type = this.glTypeMapping.get(bufferAttribute.array.constructor);
-					let normalized = bufferAttribute.normalized;
-
-					gl.bindBuffer(gl.ARRAY_BUFFER, vbo.handle);
-					gl.vertexAttribPointer(attributeLocation, bufferAttribute.itemSize, type, normalized, 0, 0);
-					gl.enableVertexAttribArray(attributeLocation);
+				if (webglBuffer.extraAttributeName !== attName) {
+					const attributeLocation = attributeLocations["aExtra"].location;
+					const bufferAttribute = geometry.attributes[attName];
+					const vbo = webglBuffer.vbos.get(attName);
+					if (bufferAttribute !== undefined && vbo !== undefined) {
+						const type = this.glTypeMapping.get(bufferAttribute.array.constructor);
+						gl.bindBuffer(gl.ARRAY_BUFFER, vbo.handle);
+						gl.vertexAttribPointer(attributeLocation, bufferAttribute.itemSize, type, bufferAttribute.normalized, 0, 0);
+						gl.enableVertexAttribArray(attributeLocation);
+					}
+					webglBuffer.extraAttributeName = attName;
 				}
-
-
-
-
 				{
-					const attExtra = octree.pcoGeometry.pointAttributes.attributes
-						.find(a => a.name === attName);
-
-					let range = material.getRange(attName);
-					if(!range){
-						range = attExtra.range;
-					}
-
-					if(!range){
-						range = [0, 1];
-					}
-
+					const attExtra = octree.pcoGeometry.pointAttributes.attributes.find(a => a.name === attName);
+					let range = material.getRange(attName) || attExtra.range || [0, 1];
 					let initialRange = attExtra.initialRange;
 					let initialRangeSize = initialRange[1] - initialRange[0];
-
-					let globalRange = range;
-					let globalRangeSize = globalRange[1] - globalRange[0];
-
+					let globalRangeSize = range[1] - range[0];
 					let scale = initialRangeSize / globalRangeSize;
-					let offset = -(globalRange[0] - initialRange[0]) / initialRangeSize;
-
+					let offset = -(range[0] - initialRange[0]) / initialRangeSize;
 					scale = Number.isNaN(scale) ? 1 : scale;
 					offset = Number.isNaN(offset) ? 0 : offset;
-
 					shader.setUniform1f("uExtraScale", scale);
-					shader.setUniform1f("uExtraOffset", offset);					
+					shader.setUniform1f("uExtraOffset", offset);
 				}
-
-			}else{
-
-				for(const attributeName in geometry.attributes){
-					const bufferAttribute = geometry.attributes[attributeName];
-					const vbo = webglBuffer.vbos.get(attributeName);
-
-
-					if(attributeLocations[attributeName] !== undefined){
-						const attributeLocation = attributeLocations[attributeName].location;
-
-						let type = this.glTypeMapping.get(bufferAttribute.array.constructor);
-						let normalized = bufferAttribute.normalized;
-						
-						gl.bindBuffer(gl.ARRAY_BUFFER, vbo.handle);
-						gl.vertexAttribPointer(attributeLocation, bufferAttribute.itemSize, type, normalized, 0, 0);
-						gl.enableVertexAttribArray(attributeLocation);
-						
-					}
-				}
+			} else {
+				// Primary attributes are already baked into the VAO; just bind it.
+				gl.bindVertexArray(webglBuffer.vao);
 			}
 
 			let numPoints = webglBuffer.numElements;
