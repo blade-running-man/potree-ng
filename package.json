@@ -26,6 +26,10 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest",
     "test:run": "vitest run",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:build": "npm run build && playwright test",
+    "test:e2e:report": "playwright show-report",
     "build:vite": "npm run build:three && npm run build:lib && npm run build:workers && npm run build:concat-workers && npm run build:pages",
     "start": "npm run dev",
     "build": "npm run build:vite",
@@ -43,6 +47,7 @@
   "author": "Markus Schütz",
   "license": "BSD-2-CLAUSE",
   "devDependencies": {
+    "@playwright/test": "^1.62.1",
     "@types/jquery": "^4.0.1",
     "@types/three": "^0.185.0",
     "jsdom": "^25.0.1",
