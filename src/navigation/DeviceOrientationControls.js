@@ -29,23 +29,51 @@ export class DeviceOrientationControls extends EventDispatcher{
 
 		this.screenOrientation = window.orientation || 0;
 
-		let deviceOrientationChange = e => {
+		this._enabled = false;
+
+		this._deviceOrientationChange = e => {
 			this.deviceOrientation = e;
 		};
 
-		let screenOrientationChange = e => {
+		this._screenOrientationChange = () => {
 			this.screenOrientation = window.orientation || 0;
 		};
 
+		// Listeners are attached lazily in connect() via the `enabled` setter.
+		// Touching the (deprecated) orientation sensor in the constructor would
+		// warn on every load, even on desktop where these controls are never
+		// activated.
+	}
+
+	get enabled () {
+		return this._enabled;
+	}
+
+	set enabled (value) {
+		if (value === this._enabled) return;
+		this._enabled = value;
+		if (value) {
+			this.connect();
+		} else {
+			this.disconnect();
+		}
+	}
+
+	connect () {
 		if ('ondeviceorientationabsolute' in window) {
-			window.addEventListener('deviceorientationabsolute', deviceOrientationChange);
+			window.addEventListener('deviceorientationabsolute', this._deviceOrientationChange);
 		} else if ('ondeviceorientation' in window) {
-			window.addEventListener('deviceorientation', deviceOrientationChange);
+			window.addEventListener('deviceorientation', this._deviceOrientationChange);
 		} else {
 			console.warn("No device orientation found.");
 		}
-		// window.addEventListener('deviceorientation', deviceOrientationChange);
-		window.addEventListener('orientationchange', screenOrientationChange);
+		window.addEventListener('orientationchange', this._screenOrientationChange);
+	}
+
+	disconnect () {
+		window.removeEventListener('deviceorientationabsolute', this._deviceOrientationChange);
+		window.removeEventListener('deviceorientation', this._deviceOrientationChange);
+		window.removeEventListener('orientationchange', this._screenOrientationChange);
 	}
 
 	setScene (scene) {
