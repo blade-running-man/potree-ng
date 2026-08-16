@@ -5,6 +5,12 @@
 node_modules
 .DS_Store
 
+# Playwright E2E artifacts
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
+
 # three.js runtime + example-only add-ons are copied from the `three` npm
 # package at build time (scripts/copy-three.mjs); npm is the single source.
 libs/three.js/build/
