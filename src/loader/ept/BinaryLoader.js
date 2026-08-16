@@ -11,10 +11,17 @@ export class EptBinaryLoader {
 		return Potree.scriptPath + '/workers/EptBinaryDecoderWorker.js';
 	}
 
+	// PointCloudCopcGeometryNode has no url() method; derive the data URL the
+	// same way EptLaszipLoader does. extension() is polymorphic (.bin / .zst).
+	nodeUrl(node) {
+		const { Key } = window.Copc;
+		return `${node.owner.base}/ept-data/${Key.toString(node.key)}${this.extension()}`;
+	}
+
 	load(node) {
 		if (node.loaded) return;
 
-		let url = node.url() + this.extension();
+		let url = this.nodeUrl(node);
 
 		let xhr = XHRFactory.createXMLHttpRequest();
 		xhr.open('GET', url, true);
