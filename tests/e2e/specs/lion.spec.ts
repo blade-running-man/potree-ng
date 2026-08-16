@@ -1,5 +1,13 @@
+import { mkdirSync, writeFileSync } from 'node:fs';
+import { dirname } from 'node:path';
 import { test, expect } from '../fixtures/potree';
 import { PERF_THRESHOLDS } from '../utils/metrics';
+import { createCdpMetrics, diffCpu, readMemory } from '../utils/perf';
+
+// Machine-readable metrics from the latest run, for diffing against the
+// committed baseline (tests/e2e/perf/BASELINE.md). Under test-results/, which
+// is gitignored.
+const METRICS_OUTPUT = 'test-results/perf/lion.json';
 
 // First E2E baseline: examples/lion.html. Verifies potree's functionality
 // (viewer initialises, the point cloud loads and actually renders points, the
@@ -8,6 +16,7 @@ import { PERF_THRESHOLDS } from '../utils/metrics';
 
 test.describe('examples/lion.html', () => {
   test('loads, renders points, and performs acceptably', async ({
+    page,
     viewerPage,
     runtimeErrors,
   }, testInfo) => {
@@ -37,23 +46,38 @@ test.describe('examples/lion.html', () => {
     expect(snap.visibleNodes, 'octree nodes are visible').toBeGreaterThan(0);
     expect(snap.pointBudget, 'point budget from lion.html honoured').toBe(1_000_000);
 
-    // Performance: sample the render loop while the scene draws.
+    // Performance: sample frame timing, plus CPU (CDP) and memory around the
+    // same window.
+    const cdp = await createCdpMetrics(page);
+    const cpuStart = await cdp.sample();
     const frames = await viewerPage.measureFrames(3_000);
+    const cpu = diffCpu(cpuStart, await cdp.sample());
+    const memory = await readMemory(page);
 
     const report = {
-      loadMs,
+      measuredAt: new Date().toISOString(),
+      example: 'lion.html',
       pointBudget: snap.pointBudget,
-      numVisiblePoints: snap.numVisiblePoints,
-      visibleNodes: snap.visibleNodes,
-      lruNumPoints: snap.lruNumPoints,
+      loadMs,
+      render: {
+        numVisiblePoints: snap.numVisiblePoints,
+        visibleNodes: snap.visibleNodes,
+        lruNumPoints: snap.lruNumPoints,
+      },
       frames,
+      cpu,
+      memory,
     };
-    // Logged for local runs and attached to the HTML report for inspection.
-    console.log('[lion.html metrics]', JSON.stringify(report, null, 2));
+    const serialized = JSON.stringify(report, null, 2);
+    // Logged for local runs, attached to the HTML report, and written to a
+    // stable path for diffing against the committed baseline.
+    console.log('[lion.html metrics]', serialized);
     await testInfo.attach('lion-metrics.json', {
-      body: JSON.stringify(report, null, 2),
+      body: serialized,
       contentType: 'application/json',
     });
+    mkdirSync(dirname(METRICS_OUTPUT), { recursive: true });
+    writeFileSync(METRICS_OUTPUT, serialized);
 
     // Performance gates are catastrophe-level only, to avoid hardware flakiness.
     expect(loadMs, 'point cloud load time').toBeLessThan(PERF_THRESHOLDS.maxLoadMs);
