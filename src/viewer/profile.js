@@ -110,8 +110,7 @@ class ProfileFakeOctree extends PointCloudTree{
 
 				for(let key of Object.keys(this.currentBatch.geometry.attributes)){
 					let attribute = this.currentBatch.geometry.attributes[key];
-					attribute.updateRange.offset = updateRange.start;
-					attribute.updateRange.count = updateRange.count;
+					attribute.addUpdateRange(updateRange.start * attribute.itemSize, updateRange.count * attribute.itemSize);
 					attribute.needsUpdate = true;
 				}
 
@@ -164,8 +163,7 @@ class ProfileFakeOctree extends PointCloudTree{
 
 		for(let key of Object.keys(this.currentBatch.geometry.attributes)){
 			let attribute = this.currentBatch.geometry.attributes[key];
-			attribute.updateRange.offset = updateRange.start;
-			attribute.updateRange.count = updateRange.count;
+			attribute.addUpdateRange(updateRange.start * attribute.itemSize, updateRange.count * attribute.itemSize);
 			attribute.needsUpdate = true;
 		}
 

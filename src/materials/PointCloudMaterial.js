@@ -1062,9 +1062,9 @@ export class PointCloudMaterial extends THREE.RawShaderMaterial {
 		texture.needsUpdate = true;
 		
 		texture.minFilter = THREE.LinearFilter;
-		texture.wrap = THREE.RepeatWrapping;
-		texture.repeat = 2;
-		// textureImage = texture.image;
+		// Wrapping for the gradient ramp is applied per-draw by PotreeRenderer
+		// from material.gradientRepeat; the old texture.wrap/.repeat assignments
+		// were no-ops (Texture has no `.wrap`, and `.repeat` is a Vector2).
 
 		return texture;
 	}

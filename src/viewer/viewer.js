@@ -2,6 +2,7 @@
 import * as THREE from "three";
 import {ClipTask, ClipMethod, CameraMode, LengthUnits, ElevationGradientRepeat} from "../defines";
 import {Renderer} from "../PotreeRenderer";
+import {Clock} from "../Clock";
 import {PotreeRenderer} from "./PotreeRenderer";
 import {EDLRenderer} from "./EDLRenderer";
 import {HQSplatRenderer} from "./HQSplatRenderer";
@@ -177,7 +178,7 @@ export class Viewer extends EventDispatcher{
 		this.compass = null;
 		
 		this.skybox = null;
-		this.clock = new THREE.Clock();
+		this.clock = new Clock();
 		this.background = null;
 
 		this.initThree();

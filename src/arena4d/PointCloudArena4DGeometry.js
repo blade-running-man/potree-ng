@@ -2,7 +2,7 @@
 import * as THREE from "three";
 import {EventDispatcher} from "../EventDispatcher";
 
-Potree.PointCloudArena4DGeometryNode = class PointCloudArena4DGeometryNode{
+export class PointCloudArena4DGeometryNode {
 
 	constructor(){
 		this.left = null;
@@ -185,7 +185,7 @@ Potree.PointCloudArena4DGeometryNode = class PointCloudArena4DGeometryNode{
 
 
 
-Potree.PointCloudArena4DGeometry = class PointCloudArena4DGeometry extends EventDispatcher{
+export class PointCloudArena4DGeometry extends EventDispatcher {
 
 	constructor(){
 		super();
@@ -215,7 +215,7 @@ Potree.PointCloudArena4DGeometry = class PointCloudArena4DGeometry extends Event
 				if (xhr.readyState === 4 && xhr.status === 200) {
 					let response = JSON.parse(xhr.responseText);
 
-					let geometry = new Potree.PointCloudArena4DGeometry();
+					let geometry = new PointCloudArena4DGeometry();
 					geometry.url = url;
 					geometry.name = response.Name;
 					geometry.provider = response.Provider;
@@ -294,7 +294,7 @@ Potree.PointCloudArena4DGeometry = class PointCloudArena4DGeometry extends Event
 					split = 'Z';
 				}
 
-				let node = new Potree.PointCloudArena4DGeometryNode();
+				let node = new PointCloudArena4DGeometryNode();
 				node.hasLeft = hasLeft;
 				node.hasRight = hasRight;
 				node.split = split;

@@ -243,17 +243,6 @@ export class OrientedImageLoader{
 		const tEnd = performance.now();
 		console.log(tEnd - tStart);
 
-		// const sp = new THREE.PlaneGeometry(1, 1);
-		// const lg = new THREE.Geometry();
-
-		// lg.vertices.push(
-		// 	new THREE.Vector3(-0.5, -0.5, 0),
-		// 	new THREE.Vector3( 0.5, -0.5, 0),
-		// 	new THREE.Vector3( 0.5,  0.5, 0),
-		// 	new THREE.Vector3(-0.5,  0.5, 0),
-		// 	new THREE.Vector3(-0.5, -0.5, 0),
-		// );
-
 		const {width, height} = cameraParams;
 		const orientedImages = [];
 		const sceneNode = new THREE.Object3D();

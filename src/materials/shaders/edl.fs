@@ -28,12 +28,12 @@ out highp vec4 fragColor;
 
 float response(float depth){
 	vec2 uvRadius = radius / vec2(screenWidth, screenHeight);
-	
+
 	float sum = 0.0;
-	
+
 	for(int i = 0; i < NEIGHBOUR_COUNT; i++){
 		vec2 uvNeighbor = vUv + uvRadius * neighbours[i];
-		
+
 		float neighbourDepth = texture(uEDLColor, uvNeighbor).a;
 		neighbourDepth = (neighbourDepth == 1.0) ? 0.0 : neighbourDepth;
 
@@ -45,13 +45,13 @@ float response(float depth){
 			}
 		}
 	}
-	
+
 	return sum / float(NEIGHBOUR_COUNT);
 }
 
 void main(){
 	vec4 cEDL = texture(uEDLColor, vUv);
-	
+
 	float depth = cEDL.a;
 	depth = (depth == 1.0) ? 0.0 : depth;
 	float res = response(depth);

@@ -4,7 +4,7 @@ import { Utils } from "../../utils";
 import { CameraMode } from "../../defines";
 import { EventDispatcher } from "../../EventDispatcher";
 
-import { normalizeAzimuthDegrees, labelScale, ndcToPixel } from "./measuringToolMath";
+import { normalizeAzimuthDegrees, labelScale } from "./measuringToolMath";
 
 function updateAzimuth (viewer: any, measure: any) {
 
@@ -326,29 +326,8 @@ export class MeasuringTool extends EventDispatcher {
 				{ // height edge
 					const edge = measure.heightEdge;
 
-					const sorted = measure.points.slice().sort((a: any, b: any) => a.position.z - b.position.z);
-					const lowPoint = sorted[0].position.clone();
-					const highPoint = sorted[sorted.length - 1].position.clone();
-					const min = lowPoint.z;
-					const max = highPoint.z;
-
-					const start = new THREE.Vector3(highPoint.x, highPoint.y, min);
-					const end = new THREE.Vector3(highPoint.x, highPoint.y, max);
-
-					const lowScreen = lowPoint.clone().project(camera);
-					const startScreen = start.clone().project(camera);
-					const endScreen = end.clone().project(camera);
-
-					const lowEL = ndcToPixel(lowScreen, clientWidth, clientHeight);
-					const startEL = ndcToPixel(startScreen, clientWidth, clientHeight);
-					const endEL = ndcToPixel(endScreen, clientWidth, clientHeight);
-
-					const lToS = lowEL.distanceTo(startEL);
-					const sToE = startEL.distanceTo(endEL);
-
-					edge.geometry.lineDistances = [0, lToS, lToS, lToS + sToE];
-					edge.geometry.lineDistancesNeedUpdate = true;
-
+					// The fat-line (Line2) computes its own dash spacing via
+					// computeLineDistances(); only the dash appearance is set here.
 					edge.material.dashSize = 10;
 					edge.material.gapSize = 10;
 				}

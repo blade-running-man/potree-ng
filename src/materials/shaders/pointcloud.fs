@@ -1,8 +1,5 @@
 #version 300 es
 
-#if defined paraboloid_point_shape
-#endif
-
 precision highp float;
 precision highp int;
 
@@ -39,23 +36,21 @@ float specularStrength = 1.0;
 
 void main() {
 
-	// fragColor = vec4(vColor, 1.0);
-
 	vec3 color = vColor;
 	float depth = gl_FragCoord.z;
 
-	#if defined(circle_point_shape) || defined(paraboloid_point_shape) 
+	#if defined(circle_point_shape) || defined(paraboloid_point_shape)
 		float u = 2.0 * gl_PointCoord.x - 1.0;
 		float v = 2.0 * gl_PointCoord.y - 1.0;
 	#endif
-	
-	#if defined(circle_point_shape) 
+
+	#if defined(circle_point_shape)
 		float cc = u*u + v*v;
 		if(cc > 1.0){
 			discard;
 		}
 	#endif
-		
+
 	#if defined color_type_indices
 		fragColor = vec4(color, uPCIndex / 255.0);
 	#else
@@ -72,16 +67,16 @@ void main() {
 		float expDepth = pos.z;
 		depth = (pos.z + 1.0) / 2.0;
 		gl_FragDepth = depth;
-		
+
 		#if defined(color_type_depth)
 			color.r = linearDepth;
 			color.g = expDepth;
 		#endif
-		
+
 		#if defined(use_edl)
 			fragColor.a = log2(linearDepth);
 		#endif
-		
+
 	#else
 		#if defined(use_edl)
 			fragColor.a = vLogDepth;
@@ -97,8 +92,6 @@ void main() {
 		fragColor.xyz = fragColor.xyz * weight;
 	#endif
 
-	//fragColor = vec4(0.0, 0.7, 0.0, 1.0);
-	
 }
 
 
