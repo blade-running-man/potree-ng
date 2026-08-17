@@ -36,9 +36,20 @@ export interface ViewState {
 }
 
 export class PotreeViewerPage {
-  constructor(private readonly page: Page) {}
+  /**
+   * `globalName` is the window property the example assigns its
+   * `Potree.Viewer` instance to. Every example so far uses `window.viewer`
+   * (the default), except the Cesium integration pages
+   * (`examples/cesium_*.html`), which run their own manual
+   * render loop alongside a separate Cesium viewer and expose the Potree
+   * side as `window.potreeViewer` instead — pass that explicitly for those.
+   */
+  constructor(
+    private readonly page: Page,
+    private readonly globalName: string = 'viewer',
+  ) {}
 
-  /** Navigate to an example and wait for `window.viewer` to be constructed.
+  /** Navigate to an example and wait for the viewer global to be constructed.
    *  Defaults to `lion.html` (the baseline example) so existing specs that
    *  call `goto()` with no argument are unaffected. */
   async goto(examplePath = '/examples/lion.html'): Promise<void> {
@@ -46,8 +57,8 @@ export class PotreeViewerPage {
     // The viewer is created in the page's module script, which may run just
     // after the 'load' event — wait for the instance and its scene.
     await this.page.waitForFunction(
-      () => !!(window as any).viewer?.scene,
-      undefined,
+      (name) => !!(window as any)[name]?.scene,
+      this.globalName,
       { timeout: 15_000 },
     );
   }
@@ -61,11 +72,11 @@ export class PotreeViewerPage {
   async waitForPointCloudLoaded(timeout = 30_000): Promise<ViewerLoadResult> {
     const start = Date.now();
     await this.page.waitForFunction(
-      () => {
-        const pcs = (window as any).viewer?.scene?.pointclouds;
+      (name) => {
+        const pcs = (window as any)[name]?.scene?.pointclouds;
         return !!pcs && pcs.length >= 1 && pcs[0].numVisiblePoints > 0;
       },
-      undefined,
+      this.globalName,
       { timeout },
     );
     return { loadMs: Date.now() - start };
@@ -84,8 +95,8 @@ export class PotreeViewerPage {
 
   /** Read a consistent snapshot of viewer state from the page. */
   async snapshot(): Promise<ViewerSnapshot> {
-    return this.page.evaluate(() => {
-      const v = (window as any).viewer;
+    return this.page.evaluate((name) => {
+      const v = (window as any)[name];
       const P = (window as any).Potree;
       const pc = v.scene.pointclouds[0];
       return {
@@ -95,7 +106,7 @@ export class PotreeViewerPage {
         pointBudget: v.getPointBudget(),
         lruNumPoints: P?.lru?.numPoints ?? 0,
       };
-    });
+    }, this.globalName);
   }
 
   /** Wait until the render loop has advanced by at least `count` frames, so a
