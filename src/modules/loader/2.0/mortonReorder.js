@@ -21,13 +21,16 @@ export function mortonKey(ix, iy, iz) {
  * Compute the permutation that orders `numPoints` by the Morton code of their
  * quantized node-relative position. `positions` is a stride-3 Float32Array,
  * `size` is the node bounding-box size, `gridSize` the quantization resolution
- * (power of two, <= 1024).
+ * (power of two). Clamped to 1024 because `part1By2` masks coordinates to 10
+ * bits (cells 0..1023).
  * Returns a Uint32Array `perm` where perm[newIndex] = oldIndex.
  */
 export function computeMortonPermutation(positions, numPoints, size, gridSize = 1024) {
+	gridSize = Math.min(gridSize, 1024);
 	const perm = new Uint32Array(numPoints);
+	// A fresh Uint32Array is already zero-filled, so the 0/1-point cases need
+	// no further work.
 	if (numPoints <= 1) {
-		if (numPoints === 1) perm[0] = 0;
 		return perm;
 	}
 	const keys = new Uint32Array(numPoints);
@@ -45,8 +48,9 @@ export function computeMortonPermutation(positions, numPoints, size, gridSize = 
 		keys[j] = mortonKey(ix, iy, iz);
 		perm[j] = j;
 	}
-	// Stable-ish sort of indices by Morton key.
-	Array.prototype.sort.call(perm, (a, b) => keys[a] - keys[b]);
+	// Stable sort of the index array by Morton key (TypedArray.prototype.sort
+	// is stable since ES2019), so points with equal keys keep their input order.
+	perm.sort((a, b) => keys[a] - keys[b]);
 	return perm;
 }
 
