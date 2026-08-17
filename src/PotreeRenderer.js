@@ -688,6 +688,60 @@ export class Renderer {
 
 		let mat4holder = new Float32Array(16);
 
+		// Return-number / number-of-returns / point-source-ID filter ranges come from
+		// material.uniforms and are identical for every node drawn this frame.
+		{
+			let uFilterReturnNumberRange = material.uniforms.uFilterReturnNumberRange.value;
+			let uFilterNumberOfReturnsRange = material.uniforms.uFilterNumberOfReturnsRange.value;
+			let uFilterPointSourceIDClipRange = material.uniforms.uFilterPointSourceIDClipRange.value;
+
+			shader.setUniform2f("uFilterReturnNumberRange", uFilterReturnNumberRange);
+			shader.setUniform2f("uFilterNumberOfReturnsRange", uFilterNumberOfReturnsRange);
+			shader.setUniform2f("uFilterPointSourceIDClipRange", uFilterPointSourceIDClipRange);
+		}
+
+		// Shadow projection matrices depend only on the shadow cameras, not on the node
+		// being drawn, so they only need to be uploaded once per frame.
+		if (shadowMaps.length > 0) {
+			let flattenedMatrices = [].concat(...shadowMaps.map(sm => sm.camera.projectionMatrix.elements));
+			const lProj = shader.uniformLocations["uShadowProj[0]"];
+			gl.uniformMatrix4fv(lProj, false, flattenedMatrices);
+		}
+
+		// gps-time scale/offset/clip-range derive from the octree-wide attribute range
+		// and the material's filter settings, not from any per-node geometry data, so
+		// they only need to be uploaded once per frame. The attribute exists in the
+		// schema only for clouds that carry gps-time; its initialRange/range are
+		// populated once real data has loaded (2.0 loader sets them up front, EPT/COPC
+		// laszip sets them as nodes stream in). EPT binary/zstandard declare the
+		// attribute in the schema but never populate its ranges, so guard on populated
+		// ranges to skip exactly the clouds the per-node code path skipped.
+		const attGPS = octree.getAttribute("gps-time");
+		if (attGPS && attGPS.initialRange && attGPS.range) {
+			let initialRange = attGPS.initialRange;
+			let initialRangeSize = initialRange[1] - initialRange[0];
+
+			let globalRange = attGPS.range;
+			let globalRangeSize = globalRange[1] - globalRange[0];
+
+			let scale = initialRangeSize / globalRangeSize;
+			let offset = -(globalRange[0] - initialRange[0]) / initialRangeSize;
+
+			scale = Number.isNaN(scale) ? 1 : scale;
+			offset = Number.isNaN(offset) ? 0 : offset;
+
+			shader.setUniform1f("uGpsScale", scale);
+			shader.setUniform1f("uGpsOffset", offset);
+
+			let uFilterGPSTimeClipRange = material.uniforms.uFilterGPSTimeClipRange.value;
+			let normalizedClipRange = [
+				(uFilterGPSTimeClipRange[0] - globalRange[0]) / globalRangeSize,
+				(uFilterGPSTimeClipRange[1] - globalRange[0]) / globalRangeSize,
+			];
+
+			shader.setUniform2f("uFilterGPSTimeClipRange", normalizedClipRange);
+		}
+
 		let i = 0;
 		for (let node of nodes) {
 
@@ -826,86 +880,11 @@ export class Renderer {
 					const lWorldView = shader.uniformLocations["uShadowWorldView[0]"];
 					gl.uniformMatrix4fv(lWorldView, false, flattenedMatrices);
 				}
-
-				{
-					let flattenedMatrices = [].concat(...shadowMaps.map(sm => sm.camera.projectionMatrix.elements));
-					const lProj = shader.uniformLocations["uShadowProj[0]"];
-					gl.uniformMatrix4fv(lProj, false, flattenedMatrices);
-				}
 			}
 
 			const geometry = node.geometryNode.geometry;
 
 			if (!geometry) console.log('Missing geometry', node)
-			if(geometry.attributes["gps-time"]){
-				const bufferAttribute = geometry.attributes["gps-time"];
-				const attGPS = octree.getAttribute("gps-time");
-
-				let initialRange = attGPS.initialRange;
-				let initialRangeSize = initialRange[1] - initialRange[0];
-
-				let globalRange = attGPS.range;
-				let globalRangeSize = globalRange[1] - globalRange[0];
-
-				let scale = initialRangeSize / globalRangeSize;
-				let offset = -(globalRange[0] - initialRange[0]) / initialRangeSize;
-
-				scale = Number.isNaN(scale) ? 1 : scale;
-				offset = Number.isNaN(offset) ? 0 : offset;
-
-				shader.setUniform1f("uGpsScale", scale);
-				shader.setUniform1f("uGpsOffset", offset);
-				//shader.setUniform2f("uFilterGPSTimeClipRange", [-Infinity, Infinity]);
-
-				let uFilterGPSTimeClipRange = material.uniforms.uFilterGPSTimeClipRange.value;
-				// let gpsCliPRangeMin = uFilterGPSTimeClipRange[0]
-				// let gpsCliPRangeMax = uFilterGPSTimeClipRange[1]
-				// shader.setUniform2f("uFilterGPSTimeClipRange", [gpsCliPRangeMin, gpsCliPRangeMax]);
-
-				let normalizedClipRange = [
-					(uFilterGPSTimeClipRange[0] - globalRange[0]) / globalRangeSize,
-					(uFilterGPSTimeClipRange[1] - globalRange[0]) / globalRangeSize,
-				];
-
-				shader.setUniform2f("uFilterGPSTimeClipRange", normalizedClipRange);
-
-
-
-				// // ranges in full gps coordinate system
-				// const globalRange = attGPS.range;
-				// const bufferRange = bufferAttribute.potree.range;
-
-				// // ranges in [0, 1]
-				// // normalizedGlobalRange = [0, 1]
-				// // normalizedBufferRange: norm buffer within norm global range e.g. [0.2, 0.8]
-				// const globalWidth = globalRange[1] - globalRange[0];
-				// const normalizedBufferRange = [
-				// 	(bufferRange[0] - globalRange[0]) / globalWidth,
-				// 	(bufferRange[1] - globalRange[0]) / globalWidth,
-				// ];
-
-				// shader.setUniform2f("uNormalizedGpsBufferRange", normalizedBufferRange);
-
-				// let uFilterGPSTimeClipRange = material.uniforms.uFilterGPSTimeClipRange.value;
-				// let gpsCliPRangeMin = uFilterGPSTimeClipRange[0]
-				// let gpsCliPRangeMax = uFilterGPSTimeClipRange[1]
-				// shader.setUniform2f("uFilterGPSTimeClipRange", [gpsCliPRangeMin, gpsCliPRangeMax]);
-
-				// shader.setUniform1f("uGpsScale", bufferAttribute.potree.scale);
-				// shader.setUniform1f("uGpsOffset", bufferAttribute.potree.offset);
-			}
-
-			{
-				let uFilterReturnNumberRange = material.uniforms.uFilterReturnNumberRange.value;
-				let uFilterNumberOfReturnsRange = material.uniforms.uFilterNumberOfReturnsRange.value;
-				let uFilterPointSourceIDClipRange = material.uniforms.uFilterPointSourceIDClipRange.value;
-				
-				
-				
-				shader.setUniform2f("uFilterReturnNumberRange", uFilterReturnNumberRange);
-				shader.setUniform2f("uFilterNumberOfReturnsRange", uFilterNumberOfReturnsRange);
-				shader.setUniform2f("uFilterPointSourceIDClipRange", uFilterPointSourceIDClipRange);
-			}
 
 			let webglBuffer = null;
 			if(!this.buffers.has(geometry)){
