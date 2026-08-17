@@ -228,3 +228,43 @@ Interpretation:
   WebGPU-track stepping stone rather than a WebGL2-tier win. Revisitable
   under that track, or with a large-scene (thousands-of-nodes) fixture that
   can actually exercise the cost T0.4 targets.
+
+## Heavy-scene perf (vol_total)
+
+Produced by `tests/e2e/specs/vol-total-perf.spec.ts`, the same
+`render.renderNodes`-at-fixed-viewpoints harness as the lion Tier 0 tables
+above, targeting `examples/viewer.html` (`pointclouds/vol_total`) instead of
+lion. vol_total is a geo-referenced (Swiss-coordinate) octree loaded through
+the same 1.x binary decoder as lion but is a substantially larger local
+dataset, giving a heavier, more realistic signal for perf/Morton work than
+lion alone. Same machine/browser config as above (headed Chromium, vsync/
+frame-cap disabled). Raw output: `test-results/perf/vol-total-perf.json`
+(gitignored).
+
+| Viewpoint | Visible nodes | Visible points | `render.renderNodes` avg (ms) | p95 (ms) |
+|---|---:|---:|---:|---:|
+| overview | 38 | 444,333 | 0.018 | 0.100 |
+| interior | 42 | 498,868 | 0.115 | 1.100 |
+| closeup | 24 | 317,835 | 0.375 | 1.800 |
+
+(Single-run measurement; `count` was 120/120 samples at every viewpoint. Node/
+point counts fluctuate a few % run to run — same streaming variance as lion.)
+
+### vol_total vs. lion (same harness, same machine)
+
+| Viewpoint | lion points | vol_total points | lion nodes | vol_total nodes |
+|---|---:|---:|---:|---:|
+| overview | 72,346 | 444,333 (**6.1x**) | 31 | 38 |
+| interior | 272,450 | 498,868 (**1.8x**) | 51 | 42 |
+| closeup | 169,236 | 317,835 (**1.9x**) | 95 | 24 |
+
+vol_total renders **1.8x–6.1x more points** than lion at every fixed
+viewpoint, confirming it is a genuinely heavier scene — it exercises the
+draw/traversal path with materially more geometry per frame, despite a
+comparable or lower node count (vol_total's octree nodes carry more points on
+average than lion's). This makes it a better regression signal than lion
+alone for point-throughput-sensitive changes (e.g. the Morton-order work),
+even though `render.renderNodes` (CPU-side traversal cost) stays sub-millisecond
+here too — lion and vol_total are both far below the scale (thousands of
+nodes) where Tier 0's CPU-side wins are expected to show up; see the T0.4
+skip rationale above.

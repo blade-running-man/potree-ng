@@ -38,8 +38,10 @@ export interface ViewState {
 export class PotreeViewerPage {
   constructor(private readonly page: Page) {}
 
-  /** Navigate to an example and wait for `window.viewer` to be constructed. */
-  async goto(examplePath: string): Promise<void> {
+  /** Navigate to an example and wait for `window.viewer` to be constructed.
+   *  Defaults to `lion.html` (the baseline example) so existing specs that
+   *  call `goto()` with no argument are unaffected. */
+  async goto(examplePath = '/examples/lion.html'): Promise<void> {
     await this.page.goto(examplePath, { waitUntil: 'load' });
     // The viewer is created in the page's module script, which may run just
     // after the 'load' event — wait for the instance and its scene.
