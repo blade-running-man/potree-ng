@@ -338,7 +338,7 @@ export class Viewer extends EventDispatcher{
 
 		if ($(this.renderArea).find('#potree_failpage').length === 0) {
 			let elFailPage = $(`
-			<div id="#potree_failpage" class="potree_failpage"> 
+			<div id="potree_failpage" class="potree_failpage">
 				
 				<h1>Potree Encountered An Error </h1>
 
