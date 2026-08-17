@@ -268,3 +268,67 @@ even though `render.renderNodes` (CPU-side traversal cost) stays sub-millisecond
 here too — lion and vol_total are both far below the scale (thousands of
 nodes) where Tier 0's CPU-side wins are expected to show up; see the T0.4
 skip rationale above.
+
+## Tier 1.1 (Morton) result + GATE 1 verdict
+
+Produced by the same `render-perf.spec.ts` harness (`render.renderNodes`
+`performance.measure`, 120 frames/viewpoint, 3 runs averaged) after wiring the
+Morton/Z-order point reorder (`src/modules/loader/2.0/mortonReorder.js`) into
+the decode path — see Task 6/7/7b in the progress log for implementation
+detail.
+
+- **Morton (Tier 1.1b) on lion, 1.x decode path (`BinaryDecoder`):** closeup
+  (95 nodes, the highest-node-count/most-overdraw-sensitive viewpoint)
+  `render.renderNodes` avg **~0.788 → ~0.741 ms (mean of 3 runs, ≈6%
+  improvement)**. Individual runs ranged 0.705–0.774 ms, i.e. the pre-Morton
+  GATE 0 median (0.788) falls inside that spread — this delta is **at the
+  edge of run-to-run noise**, not a clean signal. overview and interior are
+  indistinguishable from their pre-Morton GATE 0 numbers. Visible point/node
+  counts are unchanged from GATE 0 at every viewpoint → render output is
+  byte-identical (Morton only reorders point storage, it doesn't change what
+  is drawn).
+- **2.0 format + brotli decoders (Task 7b):** the Morton reorder was mirrored
+  into `src/modules/loader/2.0/DecoderWorker.js` and `DecoderWorker_brotli.js`
+  (inspection-verified: same `attributeBuffers` layout, node-relative
+  positions, reorder applied consistently across attributes). **No local 2.0
+  dataset exists** to load through this path, so it is **unmeasured by
+  design** — correctness rests on inspection + the shared unit-tested
+  `mortonReorder.js` helper (8/8 Vitest), not on e2e evidence.
+- **Heavy scene (vol_total) context:** vol_total renders ~6x lion's points at
+  overview (444k vs 72k) but still only spans **~24–42 visible nodes** across
+  viewpoints — the same order of magnitude as lion (24–95 nodes). Both local
+  datasets are far below the thousands-of-nodes / heavy-overdraw regime where
+  Tier 0 (×1.5–3 CPU, roadmap §9) and Morton (~×5 `GL_POINTS`, research F4)
+  are verified to pay off; vol_total was not re-run with Morton specifically
+  because the 1.x reorder already applies uniformly to any 1.x-decoded
+  dataset (lion and vol_total share the same `BinaryDecoder` code path) and
+  the lion result above is the representative signal.
+- **Honest interpretation:** on the datasets available locally (all lion-
+  scale: ≤~500k points, ≤~95 visible nodes per viewpoint), neither the CPU/
+  draw-call term (Tier 0) nor the `GL_POINTS` fill/cache-locality term
+  (Morton) is the rendering bottleneck — lion and vol_total both render in
+  sub-millisecond `render.renderNodes` time regardless of these
+  optimizations. Measured deltas are therefore modest; the clearest, most
+  reproducible win across the whole effort remains Tier 0's **bake-VAO
+  closeup result (~19%, GATE 0)**. The large gains verified in the research
+  ([07] F1/F4: ~×5 Morton, ~×10 compute rasterizer) require big/dense
+  datasets (thousands of nodes, genuine overdraw) that are not present in
+  this repo. All changes across Tier 0 + Tier 1.1 are **correctness-safe**
+  (render output identical at every measured viewpoint, full e2e suite
+  green) and **disk-format-free** (reorder happens client-side at decode
+  time, no PotreeConverter/format changes).
+- **GATE 1 verdict:** The low-risk WebGL2 path (Tier 0 micro-optimizations +
+  Tier 1.1 Morton reorder) is implemented, tested, and shipped with no
+  regressions. The remaining order-of-magnitude headroom identified by the
+  research — a compute `atomicMin` rasterizer (~×10 average, ×10–100 on
+  overdraw; [07] F1–F4) — is **fundamentally WebGPU-only**: it needs compute
+  shaders and 64-bit atomics, neither of which WebGL2 exposes ([08] §6/§11).
+  So further gains are **not** more WebGL2 micro-optimization — they require
+  the WebGPU rewrite, which is **gated** (see
+  `docs/potree-core/09-webgpu-gated-plan.md`, authored but not committed —
+  `docs/` is gitignored). **Recommendation:** to actually *measure* the
+  Tier 0/Morton wins beyond "correctness-safe, modest on lion-scale data",
+  obtain or synthesize a large/dense test dataset (thousands of nodes); to
+  *exceed* Tier 0/Morton's headroom, pursue the gated WebGPU track — but only
+  after that track's own open questions (64-bit atomics in browser WebGPU,
+  measured WebGPU-vs-native gap) are resolved.
