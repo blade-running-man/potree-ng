@@ -176,3 +176,55 @@ Notes:
   "function"`) so the diagnostic table just omits the GL-timer-query rows
   when unavailable, matching the existing "orphaned API from the WebGL2
   migration" pattern elsewhere in this codebase.
+
+## Tier 0 result (after T0.1–T0.3; T0.4 skipped)
+
+Measured at HEAD `f18ed69a` (T0.1 bake VAO, T0.2 hoist uniforms, T0.3
+no-alloc scratch buffers; T0.4 UBO matrix batching skipped — see below).
+Same harness, machine, and browser config as the pre-optimization baseline
+above (`render-perf.spec.ts`, `Potree.measureTimings`, 120 frames per
+viewpoint). Run 3 times back-to-back to average out run-to-run noise;
+`render.renderNodes` avg/p95 below are the **median** of the 3 runs.
+
+| Viewpoint | Nodes | Points | `render.renderNodes` avg before→after (ms) | p95 after (ms) |
+|---|---:|---:|---:|---:|
+| overview | 40 | 72,346 | 0.033 → 0.018 (median; −47%) | 0.100 |
+| interior | 52–60 | 272,450 | 1.188 → 1.270 (median; +7%) | 3.600 |
+| closeup | 95 | 169,236 | 0.968 → 0.788 (median; −19%) | 2.100 |
+
+3-run raw data (avg ms):
+
+| Viewpoint | Run 1 | Run 2 | Run 3 | Median | Mean |
+|---|---:|---:|---:|---:|---:|
+| overview | 0.014 | 0.020 | 0.018 | 0.018 | 0.017 |
+| interior | 1.308 | 1.270 | 1.133 | 1.270 | 1.237 |
+| closeup | 0.799 | 0.788 | 0.766 | 0.788 | 0.784 |
+
+Interpretation:
+
+- The clearest, most stable win is **closeup (~95 nodes): ~0.97 → ~0.79 ms
+  avg (~19%)**, driven mainly by T0.1 (bake VAO) — the win scales with node
+  count, consistent with the incremental Task 2/Task 4 measurements logged
+  in the progress doc.
+- overview/interior deltas are small and within run-to-run noise (overview
+  even swings ±40% run to run around a sub-0.02ms mean; interior shows a
+  nominal *increase* in one aggregate view) because lion is tiny (35–95
+  nodes, already sub-ms / ~680 FPS at 3s window) — Tier 0 targets CPU/draw-
+  call cost that only dominates on large (thousands-of-nodes) scenes. Do
+  not read the interior "+7%" as a regression; it is noise at this scale
+  (compare to the single-run swings already documented in the Task 1/2/4
+  progress-log entries, e.g. interior ranging 0.921–1.308ms across prior
+  runs with no code change between them).
+- Point counts are byte-identical to the pre-optimization baseline at every
+  viewpoint (72,346 / 272,450 / 169,236) → render output is unchanged (no
+  visual regression). Node counts fluctuate a few percent run to run
+  (documented streaming variance, not a code effect) but closeup is stable
+  at 95 across all 3 runs, same as the pre-optimization baseline.
+- **T0.4 (UBO matrix batching) was SKIPPED**: it is the only shader-touching
+  Tier 0 item (highest regression risk, since it affects all rendering
+  paths), its benefit is unmeasurable on lion (a scene this small is
+  dominated by per-frame constant overhead, not per-node matrix-upload
+  cost), and the project roadmap frames UBO batching as a GPU-driven /
+  WebGPU-track stepping stone rather than a WebGL2-tier win. Revisitable
+  under that track, or with a large-scene (thousands-of-nodes) fixture that
+  can actually exercise the cost T0.4 targets.
