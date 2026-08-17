@@ -688,6 +688,11 @@ export class Renderer {
 
 		let mat4holder = new Float32Array(16);
 
+		// Scratch reused across nodes to avoid per-node allocations in the
+		// clip-polygon and shadow world-view blocks below.
+		const _clipScratch = { mat: new THREE.Matrix4(), flat: null, verts: null, vcount: null };
+		const _shadowScratch = { mats: [], flat: null };
+
 		// Return-number / number-of-returns / point-source-ID filter ranges come from
 		// material.uniforms and are identical for every node drawn this frame.
 		{
@@ -800,40 +805,38 @@ export class Renderer {
 			{ // Clip Polygons
 				if(material.clipPolygons && material.clipPolygons.length > 0){
 
-					let clipPolygonVCount = [];
-					let worldViewProjMatrices = [];
-
-					for(let clipPolygon of material.clipPolygons){
-
-						let view = clipPolygon.viewMatrix;
-						let proj = clipPolygon.projMatrix;
-
-						let worldViewProj = proj.clone().multiply(view).multiply(world);
-
-						clipPolygonVCount.push(clipPolygon.markers.length);
-						worldViewProjMatrices.push(worldViewProj);
+					const nPoly = material.clipPolygons.length;
+					if (!_clipScratch.flat || _clipScratch.flat.length !== nPoly * 16) {
+						_clipScratch.flat = new Float32Array(nPoly * 16);
+						_clipScratch.verts = new Float32Array(8 * 3 * nPoly);
+						_clipScratch.vcount = new Int32Array(nPoly);
 					}
 
-					let flattenedMatrices = [].concat(...worldViewProjMatrices.map(m => m.elements));
+					for (let p = 0; p < nPoly; p++) {
+						const clipPolygon = material.clipPolygons[p];
 
-					let flattenedVertices = new Array(8 * 3 * material.clipPolygons.length);
-					for(let i = 0; i < material.clipPolygons.length; i++){
-						let clipPolygon = material.clipPolygons[i];
-						for(let j = 0; j < clipPolygon.markers.length; j++){
-							flattenedVertices[i * 24 + (j * 3 + 0)] = clipPolygon.markers[j].position.x;
-							flattenedVertices[i * 24 + (j * 3 + 1)] = clipPolygon.markers[j].position.y;
-							flattenedVertices[i * 24 + (j * 3 + 2)] = clipPolygon.markers[j].position.z;
+						_clipScratch.mat.copy(clipPolygon.projMatrix)
+							.multiply(clipPolygon.viewMatrix)
+							.multiply(world);
+						_clipScratch.flat.set(_clipScratch.mat.elements, p * 16);
+
+						_clipScratch.vcount[p] = clipPolygon.markers.length;
+						for (let j = 0; j < clipPolygon.markers.length; j++) {
+							const pos = clipPolygon.markers[j].position;
+							_clipScratch.verts[p * 24 + (j * 3 + 0)] = pos.x;
+							_clipScratch.verts[p * 24 + (j * 3 + 1)] = pos.y;
+							_clipScratch.verts[p * 24 + (j * 3 + 2)] = pos.z;
 						}
 					}
 
 					const lClipPolygonVCount = shader.uniformLocations["uClipPolygonVCount[0]"];
-					gl.uniform1iv(lClipPolygonVCount, clipPolygonVCount);
+					gl.uniform1iv(lClipPolygonVCount, _clipScratch.vcount);
 
 					const lClipPolygonVP = shader.uniformLocations["uClipPolygonWVP[0]"];
-					gl.uniformMatrix4fv(lClipPolygonVP, false, flattenedMatrices);
+					gl.uniformMatrix4fv(lClipPolygonVP, false, _clipScratch.flat);
 
 					const lClipPolygons = shader.uniformLocations["uClipPolygonVertices[0]"];
-					gl.uniform3fv(lClipPolygons, flattenedVertices);
+					gl.uniform3fv(lClipPolygons, _clipScratch.verts);
 
 				}
 			}
@@ -872,13 +875,19 @@ export class Renderer {
 
 				{
 
-					let worldViewMatrices = shadowMaps
-						.map(sm => sm.camera.matrixWorldInverse)
-						.map(view => new THREE.Matrix4().multiplyMatrices(view, world))
+					const nSM = shadowMaps.length;
+					if (!_shadowScratch.flat || _shadowScratch.flat.length !== nSM * 16) {
+						_shadowScratch.flat = new Float32Array(nSM * 16);
+						_shadowScratch.mats = Array.from({ length: nSM }, () => new THREE.Matrix4());
+					}
 
-					let flattenedMatrices = [].concat(...worldViewMatrices.map(c => c.elements));
+					for (let s = 0; s < nSM; s++) {
+						_shadowScratch.mats[s].multiplyMatrices(shadowMaps[s].camera.matrixWorldInverse, world);
+						_shadowScratch.flat.set(_shadowScratch.mats[s].elements, s * 16);
+					}
+
 					const lWorldView = shader.uniformLocations["uShadowWorldView[0]"];
-					gl.uniformMatrix4fv(lWorldView, false, flattenedMatrices);
+					gl.uniformMatrix4fv(lWorldView, false, _shadowScratch.flat);
 				}
 			}
 
