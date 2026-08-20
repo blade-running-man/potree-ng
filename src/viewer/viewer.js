@@ -338,7 +338,7 @@ export class Viewer extends EventDispatcher{
 
 		if ($(this.renderArea).find('#potree_failpage').length === 0) {
 			let elFailPage = $(`
-			<div id="#potree_failpage" class="potree_failpage"> 
+			<div id="potree_failpage" class="potree_failpage">
 				
 				<h1>Potree Encountered An Error </h1>
 
@@ -2152,7 +2152,12 @@ export class Viewer extends EventDispatcher{
 					group.max = Math.max(group.max, measure.duration);
 				}
 
-				let glQueries = Potree.resolveQueries(this.renderer.getContext());
+				// GL timer-query resolution (Potree.resolveQueries) is not part of
+				// the current WebGL2 renderer; guard so enabling measureTimings
+				// doesn't throw inside the render loop and kill it.
+				let glQueries = typeof Potree.resolveQueries === "function"
+					? Potree.resolveQueries(this.renderer.getContext())
+					: new Map();
 				for(let [key, value] of glQueries){
 
 					let group = {

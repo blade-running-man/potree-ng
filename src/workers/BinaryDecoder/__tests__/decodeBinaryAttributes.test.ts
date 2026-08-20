@@ -254,6 +254,99 @@ describe("decodeBinaryAttributes — R10: tidy", () => {
 	});
 });
 
+describe("decodeBinaryAttributes — Morton reorder integration (regression)", () => {
+	// Locks the in-decoder Morton/Z-order reorder: every per-point attribute
+	// (position, rgba, generic scalar packed + preciseBuffer) must be permuted by
+	// the SAME permutation, keeping cross-attribute alignment, while mean and
+	// tightBoundingBox stay order-independent. A future stride / itemSize /
+	// per-attribute misalignment would break this.
+	it("permutes position + rgba + intensity together into Morton order without cross-attribute drift", () => {
+		// POSITION_CARTESIAN (12) + rgba (4) + intensity uint16 (2) => byteSize 18.
+		const pa = new PointAttributes(["POSITION_CARTESIAN"]);
+		pa.add(new PointAttribute("rgba", PointAttributeTypes.DATA_TYPE_UINT8, 4));
+		pa.add(new PointAttribute("intensity", PointAttributeTypes.DATA_TYPE_UINT16, 1));
+		expect(pa.byteSize).toBe(18);
+
+		const scale = 0.001;
+
+		// Four points at distinct corners of the [0,4]^3 box, in a deliberately
+		// scrambled input order so the Morton permutation is NON-identity. Each
+		// point carries a correlated signature (rgba + intensity keyed on index)
+		// so we can prove every attribute moved together.
+		// corner octant weight = x*1 + y*2 + z*4  (from mortonKey bit interleave):
+		//   pt0 (4,4,4)=octant7 · pt1 (0,0,0)=octant0 · pt2 (4,0,4)=octant5 · pt3 (0,4,0)=octant2
+		// ascending octant => output order [pt1, pt3, pt2, pt0] => perm [1,3,2,0].
+		const points = [
+			{ pos: [4, 4, 4], rgba: [10, 20, 30], intensity: 100 }, // 0
+			{ pos: [0, 0, 0], rgba: [11, 21, 31], intensity: 101 }, // 1
+			{ pos: [4, 0, 4], rgba: [12, 22, 32], intensity: 102 }, // 2
+			{ pos: [0, 4, 0], rgba: [13, 23, 33], intensity: 103 }, // 3
+		];
+		const expectedOrder = [1, 3, 2, 0];
+		// Guard: the fixture must actually reshuffle, or the test proves nothing.
+		expect(expectedOrder).not.toEqual([0, 1, 2, 3]);
+
+		const buffer = new ArrayBuffer(points.length * pa.byteSize);
+		const view = new DataView(buffer);
+		points.forEach((p, j) => {
+			const base = j * pa.byteSize;
+			// POSITION_CARTESIAN: version>1.3 reads uint32 * scale.
+			view.setUint32(base + 0, Math.round(p.pos[0] / scale), true);
+			view.setUint32(base + 4, Math.round(p.pos[1] / scale), true);
+			view.setUint32(base + 8, Math.round(p.pos[2] / scale), true);
+			// rgba: 3 colour bytes + a source alpha that must be overwritten to 255.
+			view.setUint8(base + 12, p.rgba[0]);
+			view.setUint8(base + 13, p.rgba[1]);
+			view.setUint8(base + 14, p.rgba[2]);
+			view.setUint8(base + 15, 7); // bogus source alpha; decoder forces opaque
+			// intensity: uint16 LE
+			view.setUint16(base + 16, p.intensity, true);
+		});
+
+		const result = decodeBinaryAttributes({
+			buffer,
+			pointAttributes: pa,
+			version: "1.4",
+			offset: [0, 0, 0],
+			scale,
+		});
+
+		const positions = new Float32Array(result.attributeBuffers["POSITION_CARTESIAN"].buffer);
+		const colors = new Uint8Array(result.attributeBuffers["rgba"].buffer);
+		const intensityEntry = result.attributeBuffers["intensity"];
+		const intensityF32 = new Float32Array(intensityEntry.buffer);
+		const intensityPrecise = intensityEntry.preciseBuffer as Uint16Array;
+		const indices = new Uint32Array(result.attributeBuffers["INDICES"].buffer);
+
+		// (1) Output is in the expected Morton order, AND every attribute at each
+		//     output slot belongs to the same original point (no cross drift).
+		for (let i = 0; i < points.length; i++) {
+			const src = points[expectedOrder[i]];
+
+			expect([positions[3 * i + 0], positions[3 * i + 1], positions[3 * i + 2]])
+				.toEqual(src.pos);
+			expect([colors[4 * i + 0], colors[4 * i + 1], colors[4 * i + 2], colors[4 * i + 3]])
+				.toEqual([...src.rgba, 255]);
+			expect(intensityF32[i]).toBe(src.intensity);
+			expect(intensityPrecise[i]).toBe(src.intensity);
+		}
+
+		// (2) INDICES is rebuilt as 0..n in the NEW order (not permuted).
+		expect(Array.from(indices)).toEqual([0, 1, 2, 3]);
+
+		// (3) mean and tightBoundingBox are order-independent (unaffected by reorder).
+		expect(result.mean[0]).toBeCloseTo(2, 6);
+		expect(result.mean[1]).toBeCloseTo(2, 6);
+		expect(result.mean[2]).toBeCloseTo(2, 6);
+		expect(result.tightBoundingBox.min).toEqual([0, 0, 0]);
+		expect(result.tightBoundingBox.max).toEqual([4, 4, 4]);
+
+		// (4) The generic scalar's decode-time range is over all points, unchanged
+		//     by the reorder.
+		expect(intensityEntry.attribute.range).toEqual([100, 103]);
+	});
+});
+
 describe("decodeBinaryAttributes — uncovered decode paths", () => {
 	// Real behaviors not yet asserted; listed so the gaps are visible in output.
 	it.todo("decodes NORMAL_SPHEREMAPPED");

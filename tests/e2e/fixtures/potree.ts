@@ -19,7 +19,17 @@ const CONSOLE_ALLOWLIST = [
 
 // Failed requests are reported with their URL (below). Ignore browser-internal
 // or benign ones so only genuine missing/broken resources fail the test.
-const REQUEST_ALLOWLIST = ['favicon.ico', 'net::ERR_ABORTED'];
+const REQUEST_ALLOWLIST = [
+  'favicon.ico',
+  'net::ERR_ABORTED',
+  // src/viewer/map.js fetches `<pointcloud>/../sources.json` to overlay
+  // per-flight-line source footprints on the optional map panel for
+  // geo-referenced clouds. vol_total's local dataset (pointclouds/vol_total)
+  // doesn't ship that optional manifest, so this 404 is expected here; it
+  // does not affect point-cloud rendering (verified: no pageerror, no crash
+  // page, numVisiblePoints > 0).
+  'vol_total/sources.json',
+];
 
 function matches(text: string, list: string[]): boolean {
   return list.some((entry) => text.includes(entry));

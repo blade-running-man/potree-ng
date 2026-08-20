@@ -1,5 +1,6 @@
 import { Version } from "../../Version";
 import { PointAttribute, PointAttributeTypes } from "../../loader/PointAttributes";
+import { computeMortonPermutation, applyPermutation } from "../../modules/loader/2.0/mortonReorder";
 
 const typedArrayMapping: Record<string, any> = {
 	"int8":   Int8Array,
@@ -263,6 +264,42 @@ export function decodeBinaryAttributes(input: DecodeBinaryInput): DecodeBinaryRe
 		}
 
 		inOffset += pointAttribute.byteSize;
+	}
+
+	// Reorder all decoded per-point attributes into Morton/Z-order for GL_POINTS
+	// rasterization cache locality. Positions here are in the node's raw decoded
+	// frame; quantize relative to the tight bounding box computed above.
+	const posEntry = attributeBuffers["POSITION_CARTESIAN"];
+	const sizeX = tightBoxMax[0] - tightBoxMin[0];
+	const sizeY = tightBoxMax[1] - tightBoxMin[1];
+	const sizeZ = tightBoxMax[2] - tightBoxMin[2];
+	if (numPoints > 1 && posEntry && Number.isFinite(sizeX) && Number.isFinite(sizeY) && Number.isFinite(sizeZ)) {
+		const positions = new Float32Array(posEntry.buffer);
+		// positions relative to the tight bbox min, for Morton quantization
+		const rel = new Float32Array(numPoints * 3);
+		for (let j = 0; j < numPoints; j++) {
+			rel[3 * j + 0] = positions[3 * j + 0] - tightBoxMin[0];
+			rel[3 * j + 1] = positions[3 * j + 1] - tightBoxMin[1];
+			rel[3 * j + 2] = positions[3 * j + 2] - tightBoxMin[2];
+		}
+		const perm = computeMortonPermutation(rel, numPoints, { x: sizeX, y: sizeY, z: sizeZ }, 1024);
+
+		for (const name in attributeBuffers) {
+			const entry = attributeBuffers[name];
+			if (name === "rgba") {
+				const src = new Uint8Array(entry.buffer);
+				entry.buffer = applyPermutation(src, perm, 4).buffer;
+			} else {
+				// position (stride 3), normals (stride 3), generic scalars (stride 1)
+				// are all Float32-backed; derive itemSize from length.
+				const src = new Float32Array(entry.buffer);
+				const itemSize = src.length / numPoints;
+				entry.buffer = applyPermutation(src, perm, itemSize).buffer;
+				if (entry.preciseBuffer) {
+					entry.preciseBuffer = applyPermutation(entry.preciseBuffer, perm, 1);
+				}
+			}
+		}
 	}
 
 	{ // add indices

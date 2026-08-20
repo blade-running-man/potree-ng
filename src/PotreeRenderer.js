@@ -467,6 +467,8 @@ class WebGLBuffer {
 	constructor() {
 		this.numElements = 0;
 		this.vao = null;
+		this.extraVao = null;
+		this.extraAttributeName = null;
 		this.vbos = new Map();
 	}
 
@@ -498,8 +500,42 @@ export class Renderer {
 			for (let attributeName in geometry.attributes) {
 				gl.deleteBuffer(webglBuffer.vbos.get(attributeName).handle);
 			}
+			if (webglBuffer.vao) gl.deleteVertexArray(webglBuffer.vao);
+			if (webglBuffer.extraVao) gl.deleteVertexArray(webglBuffer.extraVao);
 			this.buffers.delete(geometry);
 		}
+	}
+
+	// Build (or rebuild) the secondary VAO used only when visualizing an
+	// "extra" attribute via aExtra. Kept separate so the primary VAO layout is
+	// never mutated per-frame. It bakes the fixed-location attributes; aExtra
+	// itself is pointed at the active attribute at draw time in renderNodes.
+	buildExtraVao(webglBuffer, geometry){
+		let gl = this.gl;
+
+		if(webglBuffer.extraVao !== null){
+			gl.deleteVertexArray(webglBuffer.extraVao);
+		}
+
+		webglBuffer.extraVao = gl.createVertexArray();
+		gl.bindVertexArray(webglBuffer.extraVao);
+
+		for(const attributeName in geometry.attributes){
+			if(attributeLocations[attributeName] === undefined) continue;
+
+			const loc = attributeLocations[attributeName].location;
+			const vbo = webglBuffer.vbos.get(attributeName);
+			const type = this.glTypeMapping.get(geometry.attributes[attributeName].array.constructor);
+
+			gl.bindBuffer(gl.ARRAY_BUFFER, vbo.handle);
+			gl.vertexAttribPointer(loc, geometry.attributes[attributeName].itemSize, type, geometry.attributes[attributeName].normalized, 0, 0);
+			gl.enableVertexAttribArray(loc);
+		}
+
+		gl.bindBuffer(gl.ARRAY_BUFFER, null);
+		gl.bindVertexArray(null);
+
+		webglBuffer.extraAttributeName = null; // which attr aExtra currently points at
 	}
 
 	createBuffer(geometry){
@@ -542,6 +578,8 @@ export class Renderer {
 
 		gl.bindBuffer(gl.ARRAY_BUFFER, null);
 		gl.bindVertexArray(null);
+
+		this.buildExtraVao(webglBuffer, geometry);
 
 		let disposeHandler = (event) => {
 			this.deleteBuffer(geometry);
@@ -597,6 +635,11 @@ export class Renderer {
 
 		gl.bindBuffer(gl.ARRAY_BUFFER, null);
 		gl.bindVertexArray(null);
+
+		// updateBuffer re-specifies the primary VAO above; rebuild the extra VAO
+		// to keep its baked layout in sync (a newly created VBO would otherwise
+		// leave stale pointers) and force aExtra to re-bind on the next draw.
+		this.buildExtraVao(webglBuffer, geometry);
 	}
 
 	traverse(scene) {
@@ -644,6 +687,65 @@ export class Renderer {
 		let worldView = new THREE.Matrix4();
 
 		let mat4holder = new Float32Array(16);
+
+		// Scratch reused across nodes to avoid per-node allocations in the
+		// clip-polygon and shadow world-view blocks below.
+		const _clipScratch = { mat: new THREE.Matrix4(), flat: null, verts: null, vcount: null };
+		const _shadowScratch = { mats: [], flat: null };
+
+		// Return-number / number-of-returns / point-source-ID filter ranges come from
+		// material.uniforms and are identical for every node drawn this frame.
+		{
+			let uFilterReturnNumberRange = material.uniforms.uFilterReturnNumberRange.value;
+			let uFilterNumberOfReturnsRange = material.uniforms.uFilterNumberOfReturnsRange.value;
+			let uFilterPointSourceIDClipRange = material.uniforms.uFilterPointSourceIDClipRange.value;
+
+			shader.setUniform2f("uFilterReturnNumberRange", uFilterReturnNumberRange);
+			shader.setUniform2f("uFilterNumberOfReturnsRange", uFilterNumberOfReturnsRange);
+			shader.setUniform2f("uFilterPointSourceIDClipRange", uFilterPointSourceIDClipRange);
+		}
+
+		// Shadow projection matrices depend only on the shadow cameras, not on the node
+		// being drawn, so they only need to be uploaded once per frame.
+		if (shadowMaps.length > 0) {
+			let flattenedMatrices = [].concat(...shadowMaps.map(sm => sm.camera.projectionMatrix.elements));
+			const lProj = shader.uniformLocations["uShadowProj[0]"];
+			gl.uniformMatrix4fv(lProj, false, flattenedMatrices);
+		}
+
+		// gps-time scale/offset/clip-range derive from the octree-wide attribute range
+		// and the material's filter settings, not from any per-node geometry data, so
+		// they only need to be uploaded once per frame. The attribute exists in the
+		// schema only for clouds that carry gps-time; its initialRange/range are
+		// populated once real data has loaded (2.0 loader sets them up front, EPT/COPC
+		// laszip sets them as nodes stream in). EPT binary/zstandard declare the
+		// attribute in the schema but never populate its ranges, so guard on populated
+		// ranges to skip exactly the clouds the per-node code path skipped.
+		const attGPS = octree.getAttribute("gps-time");
+		if (attGPS && attGPS.initialRange && attGPS.range) {
+			let initialRange = attGPS.initialRange;
+			let initialRangeSize = initialRange[1] - initialRange[0];
+
+			let globalRange = attGPS.range;
+			let globalRangeSize = globalRange[1] - globalRange[0];
+
+			let scale = initialRangeSize / globalRangeSize;
+			let offset = -(globalRange[0] - initialRange[0]) / initialRangeSize;
+
+			scale = Number.isNaN(scale) ? 1 : scale;
+			offset = Number.isNaN(offset) ? 0 : offset;
+
+			shader.setUniform1f("uGpsScale", scale);
+			shader.setUniform1f("uGpsOffset", offset);
+
+			let uFilterGPSTimeClipRange = material.uniforms.uFilterGPSTimeClipRange.value;
+			let normalizedClipRange = [
+				(uFilterGPSTimeClipRange[0] - globalRange[0]) / globalRangeSize,
+				(uFilterGPSTimeClipRange[1] - globalRange[0]) / globalRangeSize,
+			];
+
+			shader.setUniform2f("uFilterGPSTimeClipRange", normalizedClipRange);
+		}
 
 		let i = 0;
 		for (let node of nodes) {
@@ -703,40 +805,38 @@ export class Renderer {
 			{ // Clip Polygons
 				if(material.clipPolygons && material.clipPolygons.length > 0){
 
-					let clipPolygonVCount = [];
-					let worldViewProjMatrices = [];
-
-					for(let clipPolygon of material.clipPolygons){
-
-						let view = clipPolygon.viewMatrix;
-						let proj = clipPolygon.projMatrix;
-
-						let worldViewProj = proj.clone().multiply(view).multiply(world);
-
-						clipPolygonVCount.push(clipPolygon.markers.length);
-						worldViewProjMatrices.push(worldViewProj);
+					const nPoly = material.clipPolygons.length;
+					if (!_clipScratch.flat || _clipScratch.flat.length !== nPoly * 16) {
+						_clipScratch.flat = new Float32Array(nPoly * 16);
+						_clipScratch.verts = new Float32Array(8 * 3 * nPoly);
+						_clipScratch.vcount = new Int32Array(nPoly);
 					}
 
-					let flattenedMatrices = [].concat(...worldViewProjMatrices.map(m => m.elements));
+					for (let p = 0; p < nPoly; p++) {
+						const clipPolygon = material.clipPolygons[p];
 
-					let flattenedVertices = new Array(8 * 3 * material.clipPolygons.length);
-					for(let i = 0; i < material.clipPolygons.length; i++){
-						let clipPolygon = material.clipPolygons[i];
-						for(let j = 0; j < clipPolygon.markers.length; j++){
-							flattenedVertices[i * 24 + (j * 3 + 0)] = clipPolygon.markers[j].position.x;
-							flattenedVertices[i * 24 + (j * 3 + 1)] = clipPolygon.markers[j].position.y;
-							flattenedVertices[i * 24 + (j * 3 + 2)] = clipPolygon.markers[j].position.z;
+						_clipScratch.mat.copy(clipPolygon.projMatrix)
+							.multiply(clipPolygon.viewMatrix)
+							.multiply(world);
+						_clipScratch.flat.set(_clipScratch.mat.elements, p * 16);
+
+						_clipScratch.vcount[p] = clipPolygon.markers.length;
+						for (let j = 0; j < clipPolygon.markers.length; j++) {
+							const pos = clipPolygon.markers[j].position;
+							_clipScratch.verts[p * 24 + (j * 3 + 0)] = pos.x;
+							_clipScratch.verts[p * 24 + (j * 3 + 1)] = pos.y;
+							_clipScratch.verts[p * 24 + (j * 3 + 2)] = pos.z;
 						}
 					}
 
 					const lClipPolygonVCount = shader.uniformLocations["uClipPolygonVCount[0]"];
-					gl.uniform1iv(lClipPolygonVCount, clipPolygonVCount);
+					gl.uniform1iv(lClipPolygonVCount, _clipScratch.vcount);
 
 					const lClipPolygonVP = shader.uniformLocations["uClipPolygonWVP[0]"];
-					gl.uniformMatrix4fv(lClipPolygonVP, false, flattenedMatrices);
+					gl.uniformMatrix4fv(lClipPolygonVP, false, _clipScratch.flat);
 
 					const lClipPolygons = shader.uniformLocations["uClipPolygonVertices[0]"];
-					gl.uniform3fv(lClipPolygons, flattenedVertices);
+					gl.uniform3fv(lClipPolygons, _clipScratch.verts);
 
 				}
 			}
@@ -775,94 +875,25 @@ export class Renderer {
 
 				{
 
-					let worldViewMatrices = shadowMaps
-						.map(sm => sm.camera.matrixWorldInverse)
-						.map(view => new THREE.Matrix4().multiplyMatrices(view, world))
+					const nSM = shadowMaps.length;
+					if (!_shadowScratch.flat || _shadowScratch.flat.length !== nSM * 16) {
+						_shadowScratch.flat = new Float32Array(nSM * 16);
+						_shadowScratch.mats = Array.from({ length: nSM }, () => new THREE.Matrix4());
+					}
 
-					let flattenedMatrices = [].concat(...worldViewMatrices.map(c => c.elements));
+					for (let s = 0; s < nSM; s++) {
+						_shadowScratch.mats[s].multiplyMatrices(shadowMaps[s].camera.matrixWorldInverse, world);
+						_shadowScratch.flat.set(_shadowScratch.mats[s].elements, s * 16);
+					}
+
 					const lWorldView = shader.uniformLocations["uShadowWorldView[0]"];
-					gl.uniformMatrix4fv(lWorldView, false, flattenedMatrices);
-				}
-
-				{
-					let flattenedMatrices = [].concat(...shadowMaps.map(sm => sm.camera.projectionMatrix.elements));
-					const lProj = shader.uniformLocations["uShadowProj[0]"];
-					gl.uniformMatrix4fv(lProj, false, flattenedMatrices);
+					gl.uniformMatrix4fv(lWorldView, false, _shadowScratch.flat);
 				}
 			}
 
 			const geometry = node.geometryNode.geometry;
 
 			if (!geometry) console.log('Missing geometry', node)
-			if(geometry.attributes["gps-time"]){
-				const bufferAttribute = geometry.attributes["gps-time"];
-				const attGPS = octree.getAttribute("gps-time");
-
-				let initialRange = attGPS.initialRange;
-				let initialRangeSize = initialRange[1] - initialRange[0];
-
-				let globalRange = attGPS.range;
-				let globalRangeSize = globalRange[1] - globalRange[0];
-
-				let scale = initialRangeSize / globalRangeSize;
-				let offset = -(globalRange[0] - initialRange[0]) / initialRangeSize;
-
-				scale = Number.isNaN(scale) ? 1 : scale;
-				offset = Number.isNaN(offset) ? 0 : offset;
-
-				shader.setUniform1f("uGpsScale", scale);
-				shader.setUniform1f("uGpsOffset", offset);
-				//shader.setUniform2f("uFilterGPSTimeClipRange", [-Infinity, Infinity]);
-
-				let uFilterGPSTimeClipRange = material.uniforms.uFilterGPSTimeClipRange.value;
-				// let gpsCliPRangeMin = uFilterGPSTimeClipRange[0]
-				// let gpsCliPRangeMax = uFilterGPSTimeClipRange[1]
-				// shader.setUniform2f("uFilterGPSTimeClipRange", [gpsCliPRangeMin, gpsCliPRangeMax]);
-
-				let normalizedClipRange = [
-					(uFilterGPSTimeClipRange[0] - globalRange[0]) / globalRangeSize,
-					(uFilterGPSTimeClipRange[1] - globalRange[0]) / globalRangeSize,
-				];
-
-				shader.setUniform2f("uFilterGPSTimeClipRange", normalizedClipRange);
-
-
-
-				// // ranges in full gps coordinate system
-				// const globalRange = attGPS.range;
-				// const bufferRange = bufferAttribute.potree.range;
-
-				// // ranges in [0, 1]
-				// // normalizedGlobalRange = [0, 1]
-				// // normalizedBufferRange: norm buffer within norm global range e.g. [0.2, 0.8]
-				// const globalWidth = globalRange[1] - globalRange[0];
-				// const normalizedBufferRange = [
-				// 	(bufferRange[0] - globalRange[0]) / globalWidth,
-				// 	(bufferRange[1] - globalRange[0]) / globalWidth,
-				// ];
-
-				// shader.setUniform2f("uNormalizedGpsBufferRange", normalizedBufferRange);
-
-				// let uFilterGPSTimeClipRange = material.uniforms.uFilterGPSTimeClipRange.value;
-				// let gpsCliPRangeMin = uFilterGPSTimeClipRange[0]
-				// let gpsCliPRangeMax = uFilterGPSTimeClipRange[1]
-				// shader.setUniform2f("uFilterGPSTimeClipRange", [gpsCliPRangeMin, gpsCliPRangeMax]);
-
-				// shader.setUniform1f("uGpsScale", bufferAttribute.potree.scale);
-				// shader.setUniform1f("uGpsOffset", bufferAttribute.potree.offset);
-			}
-
-			{
-				let uFilterReturnNumberRange = material.uniforms.uFilterReturnNumberRange.value;
-				let uFilterNumberOfReturnsRange = material.uniforms.uFilterNumberOfReturnsRange.value;
-				let uFilterPointSourceIDClipRange = material.uniforms.uFilterPointSourceIDClipRange.value;
-				
-				
-				
-				shader.setUniform2f("uFilterReturnNumberRange", uFilterReturnNumberRange);
-				shader.setUniform2f("uFilterNumberOfReturnsRange", uFilterNumberOfReturnsRange);
-				shader.setUniform2f("uFilterPointSourceIDClipRange", uFilterPointSourceIDClipRange);
-			}
 
 			let webglBuffer = null;
 			if(!this.buffers.has(geometry)){
@@ -879,88 +910,43 @@ export class Renderer {
 				}
 			}
 
-			gl.bindVertexArray(webglBuffer.vao);
-
-			let isExtraAttribute =
+			const isExtraAttribute =
 				attributeLocations[material.activeAttributeName] === undefined
 				&& Object.keys(geometry.attributes).includes(material.activeAttributeName);
 
-			if(isExtraAttribute){
-
-				const attributeLocation = attributeLocations["aExtra"].location;
-
-				for(const attributeName in geometry.attributes){
-					const bufferAttribute = geometry.attributes[attributeName];
-					const vbo = webglBuffer.vbos.get(attributeName);
-					
-					gl.bindBuffer(gl.ARRAY_BUFFER, vbo.handle);
-					gl.disableVertexAttribArray(attributeLocation);
-				}
-
+			if (isExtraAttribute) {
+				// Point aExtra at the active attribute on the dedicated extra VAO,
+				// only re-specifying when the active attribute changed.
+				gl.bindVertexArray(webglBuffer.extraVao);
 				const attName = material.activeAttributeName;
-				const bufferAttribute = geometry.attributes[attName];
-				const vbo = webglBuffer.vbos.get(attName);
-
-				if(bufferAttribute !== undefined && vbo !== undefined){
-					let type = this.glTypeMapping.get(bufferAttribute.array.constructor);
-					let normalized = bufferAttribute.normalized;
-
-					gl.bindBuffer(gl.ARRAY_BUFFER, vbo.handle);
-					gl.vertexAttribPointer(attributeLocation, bufferAttribute.itemSize, type, normalized, 0, 0);
-					gl.enableVertexAttribArray(attributeLocation);
+				if (webglBuffer.extraAttributeName !== attName) {
+					const attributeLocation = attributeLocations["aExtra"].location;
+					const bufferAttribute = geometry.attributes[attName];
+					const vbo = webglBuffer.vbos.get(attName);
+					if (bufferAttribute !== undefined && vbo !== undefined) {
+						const type = this.glTypeMapping.get(bufferAttribute.array.constructor);
+						gl.bindBuffer(gl.ARRAY_BUFFER, vbo.handle);
+						gl.vertexAttribPointer(attributeLocation, bufferAttribute.itemSize, type, bufferAttribute.normalized, 0, 0);
+						gl.enableVertexAttribArray(attributeLocation);
+					}
+					webglBuffer.extraAttributeName = attName;
 				}
-
-
-
-
 				{
-					const attExtra = octree.pcoGeometry.pointAttributes.attributes
-						.find(a => a.name === attName);
-
-					let range = material.getRange(attName);
-					if(!range){
-						range = attExtra.range;
-					}
-
-					if(!range){
-						range = [0, 1];
-					}
-
+					const attExtra = octree.pcoGeometry.pointAttributes.attributes.find(a => a.name === attName);
+					let range = material.getRange(attName) || attExtra.range || [0, 1];
 					let initialRange = attExtra.initialRange;
 					let initialRangeSize = initialRange[1] - initialRange[0];
-
-					let globalRange = range;
-					let globalRangeSize = globalRange[1] - globalRange[0];
-
+					let globalRangeSize = range[1] - range[0];
 					let scale = initialRangeSize / globalRangeSize;
-					let offset = -(globalRange[0] - initialRange[0]) / initialRangeSize;
-
+					let offset = -(range[0] - initialRange[0]) / initialRangeSize;
 					scale = Number.isNaN(scale) ? 1 : scale;
 					offset = Number.isNaN(offset) ? 0 : offset;
-
 					shader.setUniform1f("uExtraScale", scale);
-					shader.setUniform1f("uExtraOffset", offset);					
+					shader.setUniform1f("uExtraOffset", offset);
 				}
-
-			}else{
-
-				for(const attributeName in geometry.attributes){
-					const bufferAttribute = geometry.attributes[attributeName];
-					const vbo = webglBuffer.vbos.get(attributeName);
-
-
-					if(attributeLocations[attributeName] !== undefined){
-						const attributeLocation = attributeLocations[attributeName].location;
-
-						let type = this.glTypeMapping.get(bufferAttribute.array.constructor);
-						let normalized = bufferAttribute.normalized;
-						
-						gl.bindBuffer(gl.ARRAY_BUFFER, vbo.handle);
-						gl.vertexAttribPointer(attributeLocation, bufferAttribute.itemSize, type, normalized, 0, 0);
-						gl.enableVertexAttribArray(attributeLocation);
-						
-					}
-				}
+			} else {
+				// Primary attributes are already baked into the VAO; just bind it.
+				gl.bindVertexArray(webglBuffer.vao);
 			}
 
 			let numPoints = webglBuffer.numElements;

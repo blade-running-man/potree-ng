@@ -2,6 +2,7 @@
 
 // import {Version} from "../../Version";
 import {PointAttributes, PointAttribute, PointAttributeTypes} from "../../../loader/PointAttributes";
+import {computeMortonPermutation, applyPermutation} from "./mortonReorder";
 
 const typedArrayMapping = {
 	"int8":   Int8Array,
@@ -153,6 +154,35 @@ onmessage = function (event) {
 
 	let occupancy = parseInt(numPoints / numOccupiedCells);
 	// console.log(`${name}: #points: ${numPoints}: #occupiedCells: ${numOccupiedCells}, occupancy: ${occupancy} points/cell`);
+
+	// Reorder decoded attributes into Morton/Z-order for GL_POINTS cache locality.
+	// 2.0 positions are already node-relative (min subtracted above), so `size` is
+	// the node bounding-box size and quantizes positions directly. One permutation
+	// is computed from positions and applied to every parallel attribute array,
+	// before INDICES/vectors are built from the reordered buffers.
+	{
+		let posName = null;
+		if (attributeBuffers["position"]) posName = "position";
+		else if (attributeBuffers["POSITION_CARTESIAN"]) posName = "POSITION_CARTESIAN";
+		if (numPoints > 1 && posName && size && Number.isFinite(size.x) && Number.isFinite(size.y) && Number.isFinite(size.z)) {
+			const positions = new Float32Array(attributeBuffers[posName].buffer);
+			const perm = computeMortonPermutation(positions, numPoints, size, 1024);
+			for (const attrName in attributeBuffers) {
+				const entry = attributeBuffers[attrName];
+				if (attrName === "rgba" || attrName === "RGBA") {
+					const src = new Uint8Array(entry.buffer);
+					entry.buffer = applyPermutation(src, perm, 4).buffer;
+				} else {
+					const src = new Float32Array(entry.buffer);
+					const itemSize = src.length / numPoints;
+					entry.buffer = applyPermutation(src, perm, itemSize).buffer;
+					if (entry.preciseBuffer) {
+						entry.preciseBuffer = applyPermutation(entry.preciseBuffer, perm, 1);
+					}
+				}
+			}
+		}
+	}
 
 	{ // add indices
 		let buff = new ArrayBuffer(numPoints * 4);
